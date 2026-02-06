@@ -112,7 +112,6 @@ You'll need to enable **USB Debugging** on your phone:
 ### 3. Install dependencies and configure
 
 ```bash
-cd android-action-kernel
 bun install
 cp .env.example .env
 ```
@@ -572,7 +571,7 @@ If you set `STREAMING_ENABLED=false`, every provider falls back to the standard 
 Seven source files, no subdirectories, no frameworks beyond the LLM SDKs:
 
 ```
-android-action-kernel/src/
+src/
   kernel.ts          Main agent loop — ties everything together
   actions.ts         15 action implementations + device detection + ADB retry logic
   llm-providers.ts   LLM abstraction (4 providers) + system prompt + message types
@@ -580,6 +579,11 @@ android-action-kernel/src/
   config.ts          Reads .env into a typed Config object
   constants.ts       ADB keycodes, coordinate ratios, defaults, magic values
   logger.ts          Session logging with crash-safe partial writes
+
+docs/
+  adb-commands.md              Full ADB shell commands reference (750+ commands)
+  capabilities-and-limitations.md   What the kernel can and cannot do
+  use-cases.md                 50+ detailed use cases across 15 categories
 ```
 
 ### Data flow in one step
@@ -692,6 +696,12 @@ A few things to try:
 **Android accessibility services** — Those run *on the phone* as installed apps. This runs on *your computer* and talks to the device over ADB. No app installation required on the phone — just USB debugging enabled.
 
 **Cloud device farms (BrowserStack, Firebase Test Lab)** — Those are designed for automated testing at scale. This is designed for single-device autonomous task completion. You could potentially use this kernel with a cloud device, but that's not the primary use case.
+
+## Documentation
+
+- **[Use Cases](docs/use-cases.md)** — 50+ detailed examples across 15 categories (messaging, social media, navigation, settings, shopping, automation, and more)
+- **[ADB Commands Reference](docs/adb-commands.md)** — Complete reference of 750+ ADB shell commands available through the `shell` action
+- **[Capabilities & Limitations](docs/capabilities-and-limitations.md)** — What the kernel can do, what it can't, and what needs root
 
 ## License
 
