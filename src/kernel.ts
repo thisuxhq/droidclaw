@@ -1,5 +1,5 @@
 /**
- * Android Action Kernel - Main Agent Loop (TypeScript/Bun Edition)
+ * DroidClaw - Main Agent Loop (TypeScript/Bun Edition)
  *
  * An AI agent that controls Android devices through the accessibility API.
  * Uses LLMs to make decisions based on screen context.
@@ -202,7 +202,7 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
     console.log("Screen resolution: using default 1080x2400 swipe coords");
   }
 
-  console.log("Android Action Kernel Started");
+  console.log("DroidClaw Started");
   console.log(`Goal: ${goal}`);
   console.log(`Provider: ${Config.LLM_PROVIDER} (${Config.getModel()})`);
   console.log(`Max steps: ${steps} | Step delay: ${Config.STEP_DELAY}s`);

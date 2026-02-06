@@ -1,5 +1,5 @@
 /**
- * LLM Provider module for Android Action Kernel.
+ * LLM Provider module for DroidClaw.
  * Supports OpenAI, Groq, AWS Bedrock, and OpenRouter (via Vercel AI SDK).
  *
  * Phase 3: Real multimodal vision (image content parts)

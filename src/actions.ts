@@ -1,5 +1,5 @@
 /**
- * Action execution module for Android Action Kernel.
+ * Action execution module for DroidClaw.
  * Handles all ADB commands for interacting with Android devices.
  *
  * Supported actions:

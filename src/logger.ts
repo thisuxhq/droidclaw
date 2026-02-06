@@ -1,5 +1,5 @@
 /**
- * Session logging for Android Action Kernel.
+ * Session logging for DroidClaw.
  * Writes incremental .partial.json after each step (crash-safe),
  * and a final .json summary at session end.
  */

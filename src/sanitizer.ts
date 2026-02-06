@@ -1,5 +1,5 @@
 /**
- * XML Sanitizer for Android Action Kernel.
+ * XML Sanitizer for DroidClaw.
  * Parses Android Accessibility XML and extracts interactive UI elements
  * with full state information and parent-child hierarchy context.
  */

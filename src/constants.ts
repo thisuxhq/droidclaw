@@ -1,5 +1,5 @@
 /**
- * Constants for Android Action Kernel.
+ * Constants for DroidClaw.
  * All magic strings, URLs, and fixed values in one place.
  */
 

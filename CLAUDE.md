@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Android Action Kernel — an AI agent that controls Android devices through the Accessibility API. It runs a Perception → Reasoning → Action loop: captures the screen state via `uiautomator dump`, sends it to an LLM for decision-making, and executes the chosen action via ADB.
+DroidClaw — an AI agent that controls Android devices through the Accessibility API. It runs a Perception → Reasoning → Action loop: captures the screen state via `uiautomator dump`, sends it to an LLM for decision-making, and executes the chosen action via ADB.
 
 **Runtime:** Bun (TypeScript, ES2022 modules). Bun natively loads `.env` files — no dotenv needed.
 

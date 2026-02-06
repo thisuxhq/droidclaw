@@ -1,4 +1,4 @@
-# Android Action Kernel — Capabilities & Limitations
+# DroidClaw — Capabilities & Limitations
 
 ## Built-in Actions (15)
 

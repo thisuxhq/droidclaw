@@ -1,7 +1,7 @@
 {
-  "name": "android-action-kernel",
+  "name": "droidclaw",
   "version": "1.0.0",
-  "description": "AI agent that controls Android devices through the accessibility API - TypeScript/Bun edition",
+  "description": "AI agent that takes control of your Android phone — give it a goal, it figures out the taps",
   "type": "module",
   "scripts": {
     "start": "bun run src/kernel.ts",

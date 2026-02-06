@@ -4,7 +4,7 @@ Complete reference of all ADB shell commands available for Android device automa
 
 ---
 
-## Currently Implemented in Android Action Kernel
+## Currently Implemented in DroidClaw
 
 | Command | Action | Description |
 |---|---|---|

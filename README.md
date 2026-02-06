@@ -1,4 +1,4 @@
-# Android Action Kernel
+# DroidClaw
 
 An AI agent that takes control of your Android phone. You give it a goal in plain English — "order me a coffee on Swiggy" or "turn on dark mode" — and it figures out what to tap, type, and swipe to get it done.
 
@@ -13,7 +13,7 @@ $ bun run src/kernel.ts
 Enter your goal: Open YouTube and search for "lofi hip hop"
 
 Screen resolution: 1080x2400
-Android Action Kernel Started
+DroidClaw Started
 Goal: Open YouTube and search for "lofi hip hop"
 Provider: groq (llama-3.3-70b-versatile)
 Max steps: 30 | Step delay: 2s

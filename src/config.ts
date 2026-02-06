@@ -1,5 +1,5 @@
 /**
- * Configuration management for Android Action Kernel.
+ * Configuration management for DroidClaw.
  * Bun natively loads .env files — no dotenv needed.
  */
 
