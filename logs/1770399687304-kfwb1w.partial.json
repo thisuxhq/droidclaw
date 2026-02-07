@@ -1,0 +1,409 @@
+{
+  "sessionId": "1770399687304-kfwb1w",
+  "goal": "open gmail and send hello from droidclaw to dvlprsanju@gmail.com",
+  "provider": "openrouter",
+  "model": "google/gemini-2.5-flash-lite-preview-09-2025",
+  "startTime": "2026-02-06T17:41:27.304Z",
+  "endTime": "2026-02-06T17:43:57.354Z",
+  "totalSteps": 16,
+  "successCount": 16,
+  "failCount": 0,
+  "completed": false,
+  "steps": [
+    {
+      "step": 1,
+      "timestamp": "2026-02-06T17:41:33.192Z",
+      "foregroundApp": null,
+      "elementCount": 21,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "launch",
+        "reason": "Launch the Gmail app to start composing an email.",
+        "think": "The goal is to open Gmail and send an email. The current screen seems to be a system settings screen (likely related to developer options or wireless debugging), not the home screen or Gmail. First, I need to navigate back to the home screen or launch Gmail directly.",
+        "plan": [
+          "Launch Gmail application",
+          "Compose a new email",
+          "Enter recipient address",
+          "Enter email body",
+          "Send the email",
+          "Verify completion"
+        ],
+        "planProgress": "Step 1: Launch Gmail application"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Launched com.google.android.gm"
+      },
+      "llmLatencyMs": 2657,
+      "actionLatencyMs": 507
+    },
+    {
+      "step": 2,
+      "timestamp": "2026-02-06T17:41:42.714Z",
+      "foregroundApp": null,
+      "elementCount": 55,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap the compose button to start a new email.",
+        "coordinates": [
+          828,
+          2017
+        ],
+        "think": "I have successfully launched Gmail. The screen shows the inbox. The goal is to compose a new email. I see a 'Compose' button, likely at the bottom right of the screen based on typical Gmail UI structure and the available elements list (though coordinate 828, 2017 seems a bit far down, it's the only prominent action candidate besides search). I should tap 'Compose'.",
+        "plan": [
+          "Compose a new email",
+          "Enter recipient address dvlprsanju@gmail.com",
+          "Enter email body \"hello from droidclaw\"",
+          "Send the email",
+          "Verify completion"
+        ],
+        "planProgress": "Step 2: Compose a new email"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (828, 2017)"
+      },
+      "llmLatencyMs": 2850,
+      "actionLatencyMs": 144
+    },
+    {
+      "step": 3,
+      "timestamp": "2026-02-06T17:41:53.008Z",
+      "foregroundApp": null,
+      "elementCount": 14,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "wait",
+        "reason": "Failed to parse response, waiting"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Waited 2s"
+      },
+      "llmLatencyMs": 3432,
+      "actionLatencyMs": 2003
+    },
+    {
+      "step": 4,
+      "timestamp": "2026-02-06T17:41:59.934Z",
+      "foregroundApp": null,
+      "elementCount": 14,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "type",
+        "reason": "Typing the recipient email address into the 'To' field.",
+        "text": "dvlprsanju@gmail.com",
+        "think": "I am now in the compose screen. The first text field is for the recipient (To). I need to enter 'dvlprsanju@gmail.com' there. Since the element next to 'To' is empty and editable, I should use it. The coordinates for the text input field seem to be around [573, 501] based on the previous context, though the context shows three different editable fields. The element next to 'To' is the one I should target. Looking at the context, the area for 'To' appears to be where the first text input field is located, based on proximity to 'To' element at [57, 501]. The first editable field is centered at [573, 501]. I will tap there, then type. The context shows the top editable field is focused and empty: {\"text\":\"\",\"center\":[573,501],\"action\":\"type\",\"focused\":true,\"editable\":true}.",
+        "plan": [
+          "Enter recipient address dvlprsanju@gmail.com",
+          "Enter email body \"hello from droidclaw\"",
+          "Send the email",
+          "Verify completion"
+        ],
+        "planProgress": "Step 2: Enter recipient address dvlprsanju@gmail.com"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Typed \"dvlprsanju@gmail.com\""
+      },
+      "llmLatencyMs": 1207,
+      "actionLatencyMs": 1113
+    },
+    {
+      "step": 5,
+      "timestamp": "2026-02-06T17:42:15.022Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "wait",
+        "reason": "Failed to parse response, waiting"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Waited 2s"
+      },
+      "llmLatencyMs": 8431,
+      "actionLatencyMs": 2005
+    },
+    {
+      "step": 6,
+      "timestamp": "2026-02-06T17:42:26.016Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": false,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap the suggested contact to confirm the recipient and dismiss suggestions, then proceed to the subject field.",
+        "coordinates": [
+          372,
+          826
+        ],
+        "think": "I have typed the recipient address 'dvlprsanju@gmail.com'. Gmail usually auto-selects the contact after typing, or I need to tap away/tap the next field. Since the email address is fully typed in the 'To' field which is now showing 'dvlprsanju@gmail.com', I should move to the 'Subject' field next. The subject field hasn't been typed yet, and I see a field below the recipient field that usually serves as the Subject line or is the main body if Subject is hidden. In the previous turn, 'Subject' was visible but now it seems to be replaced by suggestions/contacts related to the 'To' field. Given the context, I should tap on the next available editable field, which seems to be the one centered at [540, 721] or the one centered at [540, 648] if it was the subject field. The initial context showed a subject field being typed at [540, 648]. Now I see an empty field at [540, 721]. I will assume the next field is for the subject and tap on the one that resulted in suggestions being displayed, which may actually be the body field now since the recipient field is still showing focus/text. Let's look for the Subject field. In the prior turn, there was a field centered at [540, 648] labeled 'Subject'. Since the recipient insertion caused suggestions, I should tap on the next logical input area, which is the Subject field. The coordinate [540, 721] seems like a good candidate for the next input area if the recipient selection dismissed the subject field temporarily, or perhaps I should tap the suggestion 'dvlprsanju@gmail.com' at [372, 826] to confirm the recipient. Since the goal is to send the email, confirming the address might be wise, although Gmail often handles this implicitly. Let's assume the email is accepted and move to the Subject field. The previous successful step involved typing, and now the screen is stuck. I must act. I will tap the suggestion 'dvlprsanju@gmail.com' at [372, 826] to finalize the recipient selection, then move to the subject field. However, since the current text input field *is* showing 'dvlprsanju@gmail.com' and focused, maybe I should just tap the next input field, which should be the subject field, typically below the recipient field. Let's assume the field at [540, 648] from the previous turn is now hidden or occupied by suggestion popups, and the next main input area is below the recipient box. I see an element at [540, 721]. I will try to tap it, hoping it is the subject field or the body field. I see a suggestion for 'dvlprsanju@gmail.com' at [372, 826]. Tapping this might confirm the recipient entry. I'll try tapping the suggestion first, then the subject field if necessary. No, the top field already contains the text I typed, focusing further on that field by tapping a suggestion might be redundant or cause issues. I should target the Subject field. The last context had 'Subject' at [540, 648]. The current context has an empty tap area at [540, 721]. I will tap [540, 721] expecting it to reveal the Subject field or be the jump to the next logical input. Wait, the element centered at [573, 501] is still showing 'dvlprsanju@gmail.com' and is focused. This suggests the recipient entry is still active or confirmed implicitly. I should move to the next field, which in this context seems to be the body or subject. Based on standard structure, Subject comes next. I'll look for the next input area, which I believe is centered somewhere around the middle of the screen, below the 'To' field. I see an empty tap area at [540, 721]. I'll tap it to see if it advances to the Subject field or opens the body. Wait, I see a 'Subject' field mentioned in the *previous* context at [540, 648]. Since the screen is stuck (SCREEN_CHANGE: NOT changed), tapping the suggestion might force state change. Let's try tapping the visible suggestion for the intended recipient: 'dvlprsanju@gmail.com' at [372, 826]. This confirms the recipient and usually dismisses suggestions."
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (372, 826)"
+      },
+      "llmLatencyMs": 6173,
+      "actionLatencyMs": 146
+    },
+    {
+      "step": 7,
+      "timestamp": "2026-02-06T17:42:36.331Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "type",
+        "reason": "Typing the message into the Subject field.",
+        "coordinates": [
+          540,
+          648
+        ],
+        "text": "hello from droidclaw",
+        "think": "I tapped the suggestion in the previous step, which resulted in 'Sanju' appearing centered at [322, 501] next to 'To'. It seems the recipient field is now populated with 'Sanju' (which is likely inferred from 'dvlprsanju@gmail.com'). Since the recipient is set (or at least the UI reflects an entry), I should now move to the Subject field. The context shows 'Subject' centered at [540, 648] ready for input. I need to type \"hello from droidclaw\" into the subject field first (although the goal only specifies that as the body, typically if a subject isn't specified, putting it in the body is fine, but I'll use the subject field if available). Let's check the body field. The body field is likely the one that was previously centered around [540, 804] labeled 'Compose email'. I will type the message into the Subject field first, and then into the body field if the instruction implies the body content. The instruction is: \"send hello from droidclaw to dvlprsanju@gmail.com\". Since it doesn't specify a subject, I will put 'hello from droidclaw' in the subject field as a placeholder, and if possible, also in the body field, or just the body field. Given the limited context, I will use 'hello from droidclaw' as the Subject, and then look for the body field. Let's target the Subject field: [540, 648].",
+        "plan": [
+          "Enter subject \"hello from droidclaw\"",
+          "Enter body \"hello from droidclaw\" (if needed, otherwise skip to Send)",
+          "Send the email",
+          "Verify completion"
+        ],
+        "planProgress": "Step 3: Enter subject \"hello from droidclaw\""
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Typed \"hello from droidclaw\""
+      },
+      "llmLatencyMs": 3924,
+      "actionLatencyMs": 815
+    },
+    {
+      "step": 8,
+      "timestamp": "2026-02-06T17:42:44.379Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap the send button to dispatch the email.",
+        "coordinates": [
+          882,
+          181
+        ],
+        "think": "The subject has been entered as 'hello from droidclaw'. The coordinate for the text input has changed to [669, 501], suggesting the subject field might have shifted or it's now the body field. The previous subject field was at [540, 648] and now the text is visible at [669, 501]. I also see a 'hello from droidclaw' centered at [353, 683] which seems to be the body area, as it's below the recipient area and subject field if they were stacked above it. Given the goal is to send the message, and 'hello from droidclaw' is the content, I need to ensure it's in the body if it's not already there. Since the subject seems to have been input successfully, I should now use 'Send' button, centered at [882, 181]. If the message body is empty after sending, the recipient or subject might suffice if the content is identical. I will tap 'Send'.",
+        "plan": [
+          "Send the email",
+          "Verify completion"
+        ],
+        "planProgress": "Step 4: Send the email"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (882, 181)"
+      },
+      "llmLatencyMs": 3304,
+      "actionLatencyMs": 153
+    },
+    {
+      "step": 9,
+      "timestamp": "2026-02-06T17:42:52.760Z",
+      "foregroundApp": null,
+      "elementCount": 2,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap OK to dismiss the invalid address error.",
+        "coordinates": [
+          887,
+          1267
+        ],
+        "think": "The email failed to send because Gmail interpreted 'hello from droidclaw' (which was probably entered in the subject field) as an invalid recipient address, likely because the subject field was treated as the recipient field, or the 'To' field was empty/invalid when 'Send' was pressed, and the system defaulted to checking the last text input as a recipient address. Looking at the context: I had 'Sanju' tapped which resulted in 'Recipients: Sanju,'. I suspect the primary recipient field was still expecting input or failed validation when I pressed send if the subject input overwrote the To field unexpectedly. The message now is: \"The address <hello from droidclaw> is invalid.\" I need to go back to the compose screen and ensure the To field has the correct address and that the body/subject contains 'hello from droidclaw'. Since the message is about an invalid address, I should press 'OK' to dismiss the error and correct the address/content. The To field might have been incorrectly populated by the subject content after I typed it in the subject field. I need to go back to the compose screen. I see an 'OK' button at [887, 1267].",
+        "plan": [
+          "Acknowledge error by tapping OK",
+          "Go back to compose screen and verify recipient and body/subject",
+          "Send the email safely"
+        ],
+        "planProgress": "Step 1: Acknowledge error by tapping OK"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (887, 1267)"
+      },
+      "llmLatencyMs": 3758,
+      "actionLatencyMs": 160
+    },
+    {
+      "step": 10,
+      "timestamp": "2026-02-06T17:43:02.035Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap the send button to dispatch the email, hoping the recipient selection process stabilized after dismissing the error.",
+        "coordinates": [
+          882,
+          181
+        ],
+        "think": "I pressed OK and returned to the compose screen. The error occurred because the text 'hello from droidclaw' was likely interpreted as the email address for the 'To' field, probably appearing there after I typed it in the subject field, or because the 'To' field became empty/invalid. The context shows: 'Recipients: Sanju,' centered around y=996, which is highly suspicious as the recipient list. 'Sanju' was tapped previously. The content 'hello from droidclaw' is in the input field centered at [669, 501]. I need to ensure the correct recipient is set, and then put the message content in the body. It seems 'Sanju' is set as the recipient, but the actual text 'dvlprsanju@gmail.com' is missing. I need to tap the recipient area again to correct it or ensure the content is in the body. Looking at the context, the text field that was the Subject field in the previous step is now showing 'hello from droidclaw' edited at [669, 501]. The body field is likely the next editable area. I see an area centered at [540, 650] which might be the body if the subject field was at [540, 648] previously. I will assume the message content 'hello from droidclaw' should go into the body field, and I will tap the area below the subject/recipient section, which is likely the body. The context shows an editable field at [669, 501] being edited. I will type 'hello from droidclaw' again into the body field, assuming [669, 501] is an existing text box but I need to focus on the *body* now. Given the previous confusion, I will tap the 'Send' button again ([882, 181]), hoping that since 'Sanju' is listed under recipients, it might be sufficient, even if the body is empty. If it fails again, I'll explicitly enter 'hello from droidclaw' into the body. For now, let's retry sending, as fixing the address might be complex without knowing exactly where 'dvlprsanju@gmail.com' needs to be re-entered. Since 'Sanju' is visible next to 'Recipients:', I will try sending again.",
+        "plan": [
+          "Send the email again",
+          "Verify completion"
+        ],
+        "planProgress": "Step 4 (Retry): Send the email again"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (882, 181)"
+      },
+      "llmLatencyMs": 4464,
+      "actionLatencyMs": 101
+    },
+    {
+      "step": 11,
+      "timestamp": "2026-02-06T17:43:10.782Z",
+      "foregroundApp": null,
+      "elementCount": 2,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap OK to dismiss the invalid address error and return to the compose screen to fix the recipient field.",
+        "coordinates": [
+          887,
+          1267
+        ],
+        "think": "The send attempt failed again with the same error: \"The address <hello from droidclaw> is invalid.\" This confirms that the text I entered in the subject field (which contained 'hello from droidclaw') was likely being mistakenly read by the system as the recipient address when 'Send' was tapped, or the actual 'To' field was empty/invalid ('Sanju' likely wasn't confirmed as the final recipient address). I must tap 'OK' again, return to the compose screen, and explicitly type 'dvlprsanju@gmail.com' into the 'To' field and then place 'hello from droidclaw' into the body field.",
+        "plan": [
+          "Acknowledge error by tapping OK",
+          "Explicitly set recipient to dvlprsanju@gmail.com",
+          "Enter message body \"hello from droidclaw\"",
+          "Send the email"
+        ],
+        "planProgress": "Step 1 (Retry): Acknowledge error by tapping OK"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (887, 1267)"
+      },
+      "llmLatencyMs": 3030,
+      "actionLatencyMs": 142
+    },
+    {
+      "step": 12,
+      "timestamp": "2026-02-06T17:43:19.731Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "tap",
+        "reason": "Tap the recipient input area again, expecting it to clear existing content and allow typing the correct email address.",
+        "coordinates": [
+          540,
+          501
+        ],
+        "think": "I am back on the compose screen. The 'To' field seems to incorrectly contain 'Sanju' in the recipient list display (y=996), or the input field which previously contained the To/Subject is now focused on editing 'hello from droidclaw' centered at [669, 501]. I must explicitly target the 'To' field and input 'dvlprsanju@gmail.com'. Since the previous step involved tapping 'Sanju' as a contact, that might have populated the 'To' field with an incomplete/canonical name that Gmail dislikes. I need to tap the 'To' area which seems to be implicitly managed by the area around y=996. The input field that is currently focused/edited is at [669, 501]. I will tap the element corresponding to the recipient input area, which based on the previous turn's context where 'To' was read, should be near the top. The area where I previously typed the recipient is now showing content that seems related to the Subject/Body. Given the structure, the recipient entry point is usually slightly above where the subject field is. I will tap the area around 'To' [57, 996] or the input area near it. I see an input field centered at [540, 501] that I tapped before providing the recipient. I will tap that to ensure I am editing the recipient field again and clear any remnants. However, since the text 'hello from droidclaw' is currently being edited at [669, 501], I should first ensure that text is the *body* content, not the recipient. The original 'To' entry should be where 'Sanju' hint is visible. I will tap the area corresponding to where I added the recipient previously, which was the first editable field. Let's tap the empty editable field at [540, 501] to try and get control of the recipient field, assuming the current edit at [669, 501] is the body.",
+        "plan": [
+          "Clear and set recipient to dvlprsanju@gmail.com in the 'To' field (likely coordinates around [540, 501] based on prior context for recipient)",
+          "Type body message in the next field (likely [669, 501] or below)",
+          "Send the email"
+        ],
+        "planProgress": "Step 2: Explicitly set recipient to dvlprsanju@gmail.com"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Tapped (540, 501)"
+      },
+      "llmLatencyMs": 4150,
+      "actionLatencyMs": 163
+    },
+    {
+      "step": 13,
+      "timestamp": "2026-02-06T17:43:29.115Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": false,
+      "llmDecision": {
+        "action": "type",
+        "reason": "Explicitly typing the correct email address into the recipient field located around [540, 501] or [573, 501] to correct the previous error.",
+        "coordinates": [
+          540,
+          501
+        ],
+        "text": "dvlprsanju@gmail.com",
+        "think": "Tapping [540, 501] did not change the screen state, meaning either it was already focused or tapping it did nothing useful. The issue persists: the recipient address is likely incorrect/missing, and the content 'hello from droidclaw' is present in an input area ([669, 501]), which caused the last failure. I need to explicitly type 'dvlprsanju@gmail.com' into the 'To' input field, which I believe corresponds to the field that was editable and empty in previous steps, or the one that is currently focused/edited, if I clear it. Since [669, 501] is focused and editable, and contains the body content, I should assume this is the body field now. I need to find the 'To' field. The 'To' label is at [57, 996]. The input field associated with 'To' must be above the subject/body fields. Based on my knowledge of the previous context, the recipient input was first shown at [573, 501] (Turn 1). In the current context, there is an editable field at [669, 501]. I need to find the one for the recipient. Since the screen is static, I should try typing the correct address where I suspect the recipient field is, which is likely the one that was previously editable and is now perhaps empty or mislabeled. I see an empty tap area at [540, 501]. I will try tapping that again and typing the correct address. If that fails, I will try clearing the content at [669, 501] and type the correct address there, then check if the body field appears. Let's try typing the recipient address into the field that was previously identified as the recipient field location, which seems to be around [540, 501] or [573, 501] from Turn 1, even if it looks empty now."
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Typed \"dvlprsanju@gmail.com\""
+      },
+      "llmLatencyMs": 4030,
+      "actionLatencyMs": 726
+    },
+    {
+      "step": 14,
+      "timestamp": "2026-02-06T17:43:39.373Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": true,
+      "llmDecision": {
+        "action": "wait",
+        "reason": "Failed to parse response, waiting"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Waited 2s"
+      },
+      "llmLatencyMs": 3694,
+      "actionLatencyMs": 2005
+    },
+    {
+      "step": 15,
+      "timestamp": "2026-02-06T17:43:49.283Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": false,
+      "llmDecision": {
+        "action": "clear",
+        "reason": "Clear the currently active, corrupted input field at [573, 633] to regain control over recipient entry.",
+        "think": "The system seems very confused about the input fields. In the last action, I attempted to type the recipient address into [540, 501]. Instead, the screen updated to show a corrupted text string: \"helldvlprsanju@gmail.como from droidclaw\" in editable fields/read elements. This indicates system confusion likely due to overlapping input fields or misinterpreting my previous sequence of taps/types. The goal is to send to 'dvlprsanju@gmail.com' with content 'hello from droidclaw'.\n\nI need to reset the state by clearing whatever text is actively being edited (focused at [573, 633]) and then inputting the recipient address correctly, followed by the body content, and finally sending.\n\n1. Clear the current text/focus at [573, 633]. (Use 'clear' only works on 'type' elements, but I can type over it if I assume [573, 633] is the recipient field).\n2. Input 'dvlprsanju@gmail.com' in the recipient field.\n3. Input 'hello from droidclaw' in the body field.\n4. Send.\n\nSince action='type' implies it's an editable field, I will first try to clear it, then type the recipient address there, assuming this field absorbed the recipient text.\n\nIf I use 'clear' on the focused element, it will clear the text 'helldvlprsanju@gmail.como from droidclaw'. Then I will type the correct recipient."
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Cleared text field"
+      },
+      "llmLatencyMs": 3500,
+      "actionLatencyMs": 858
+    },
+    {
+      "step": 16,
+      "timestamp": "2026-02-06T17:43:57.354Z",
+      "foregroundApp": null,
+      "elementCount": 16,
+      "screenChanged": false,
+      "llmDecision": {
+        "action": "type",
+        "reason": "Overwrite the corrupted text with the correct recipient address.",
+        "coordinates": [
+          573,
+          633
+        ],
+        "text": "dvlprsanju@gmail.com",
+        "think": "The 'clear' action failed to register or the underlying state didn't change. I need to proceed with typing the correct recipient address into the field that is currently focused: [573, 633], overwriting the corrupted text if 'clear' didn't work. Since the text contains the correct email structure, this field likely *is* the recipient field that got mangled with subject content. I must overwrite it with the correct recipient address 'dvlprsanju@gmail.com'.",
+        "plan": [
+          "Type correct recipient into the focused field",
+          "Type message body 'hello from droidclaw' in the next field",
+          "Send"
+        ],
+        "planProgress": "Step 2: Type correct recipient 'dvlprsanju@gmail.com'"
+      },
+      "actionResult": {
+        "success": true,
+        "message": "Typed \"dvlprsanju@gmail.com\""
+      },
+      "llmLatencyMs": 2816,
+      "actionLatencyMs": 640
+    }
+  ]
+}

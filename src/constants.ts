@@ -28,6 +28,7 @@ export const KEYCODE_DPAD_RIGHT = "22";
 export const KEYCODE_VOLUME_UP = "24";
 export const KEYCODE_VOLUME_DOWN = "25";
 export const KEYCODE_POWER = "26";
+export const KEYCODE_PASTE = "279";
 
 // ===========================================
 // Default Screen Coordinates (for swipe actions)

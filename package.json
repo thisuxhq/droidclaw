@@ -13,7 +13,8 @@
     "@openrouter/ai-sdk-provider": "^2.1.1",
     "ai": "^6.0.72",
     "fast-xml-parser": "^4.5.0",
-    "openai": "^4.73.0"
+    "openai": "^4.73.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

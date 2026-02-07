@@ -13,8 +13,9 @@ import {
   InvokeModelCommand,
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import { generateText, streamText } from "ai";
+import { generateText, streamText, generateObject, streamObject } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { z } from "zod";
 
 import { Config } from "./config.js";
 import {
@@ -22,7 +23,7 @@ import {
   BEDROCK_ANTHROPIC_MODELS,
   BEDROCK_META_MODELS,
 } from "./constants.js";
-import type { ActionDecision } from "./actions.js";
+import { sanitizeCoordinates, type ActionDecision } from "./actions.js";
 
 // ===========================================
 // System Prompt — all 15 actions + planning
@@ -33,10 +34,11 @@ export const SYSTEM_PROMPT = `You are an Android Driver Agent. Your job is to ac
 You will receive:
 1. GOAL — the user's task.
 2. FOREGROUND_APP — the currently active app package and activity.
-3. SCREEN_CONTEXT — JSON array of interactive UI elements with coordinates and states.
-4. SCREENSHOT — an image of the current screen (when available).
-5. SCREEN_CHANGE — what changed since your last action (or if the screen is stuck).
-6. VISION_FALLBACK — present when the accessibility tree is empty (custom UI / WebView).
+3. LAST_ACTION_RESULT — the outcome of your previous action (success/failure and details).
+4. SCREEN_CONTEXT — JSON array of interactive UI elements with coordinates and states.
+5. SCREENSHOT — an image of the current screen (when available).
+6. SCREEN_CHANGE — what changed since your last action (or if the screen is stuck).
+7. VISION_FALLBACK — present when the accessibility tree is empty (custom UI / WebView).
 
 Previous conversation turns contain your earlier observations and actions (multi-turn memory).
 
@@ -59,16 +61,16 @@ Example:
 AVAILABLE ACTIONS (15 total)
 ═══════════════════════════════════════════
 
-Navigation:
-  {"action": "tap", "coordinates": [x, y], "reason": "..."}
-  {"action": "longpress", "coordinates": [x, y], "reason": "..."}
-  {"action": "swipe", "direction": "up|down|left|right", "reason": "..."}
+Navigation (coordinates MUST be a JSON array of TWO separate integers [x, y] — never concatenate them):
+  {"action": "tap", "coordinates": [540, 1200], "reason": "..."}
+  {"action": "longpress", "coordinates": [540, 1200], "reason": "..."}
+  {"action": "scroll", "direction": "up|down|left|right", "reason": "Scroll to see more content (down=below, up=above)"}
   {"action": "enter", "reason": "Press Enter/submit"}
   {"action": "back", "reason": "Navigate back"}
   {"action": "home", "reason": "Go to home screen"}
 
-Text Input:
-  {"action": "type", "text": "Hello World", "reason": "..."}
+Text Input (ALWAYS include coordinates to focus the correct field before typing):
+  {"action": "type", "coordinates": [540, 648], "text": "Hello World", "reason": "..."}
   {"action": "clear", "reason": "Clear current text field before typing"}
 
 App Control:
@@ -77,15 +79,25 @@ App Control:
   {"action": "launch", "package": "com.whatsapp", "uri": "content://media/external/images/1", "extras": {"android.intent.extra.TEXT": "Check this"}, "reason": "Share image to WhatsApp"}
 
 Data:
-  {"action": "screenshot", "reason": "Capture current screen"}
-  {"action": "screenshot", "filename": "order_confirmation.png", "reason": "Save proof"}
   {"action": "clipboard_get", "reason": "Read clipboard contents"}
   {"action": "clipboard_set", "text": "copied text", "reason": "Set clipboard"}
+  {"action": "paste", "coordinates": [540, 804], "reason": "Paste clipboard into focused field"}
 
 System:
   {"action": "shell", "command": "am force-stop com.app.broken", "reason": "Kill crashed app"}
   {"action": "wait", "reason": "Wait for screen to load"}
   {"action": "done", "reason": "Task is complete"}
+
+Multi-Step Actions (PREFER these over basic actions when applicable):
+  {"action": "read_screen", "reason": "Scroll through entire page, collect ALL text, copy to clipboard"}
+  {"action": "submit_message", "reason": "Find and tap Send button, wait for response"}
+  {"action": "copy_visible_text", "reason": "Copy all visible text to clipboard"}
+  {"action": "copy_visible_text", "query": "search term", "reason": "Copy matching text to clipboard"}
+  {"action": "wait_for_content", "reason": "Wait for new content to appear"}
+  {"action": "find_and_tap", "query": "Button Label", "reason": "Find element by text and tap it"}
+  {"action": "compose_email", "query": "recipient@email.com", "reason": "Fill email To+Body, pastes clipboard into body"}
+  {"action": "compose_email", "query": "recipient@email.com", "text": "body", "reason": "Fill email with specific body"}
+  NOTE: compose_email REQUIRES "query" = recipient email. "text" is optional body (clipboard used if empty).
 
 ═══════════════════════════════════════════
 ELEMENT PROPERTIES YOU WILL SEE
@@ -107,20 +119,62 @@ CRITICAL RULES
 ═══════════════════════════════════════════
 
 1. DISABLED ELEMENTS: If "enabled": false, DO NOT tap or interact with it. Find an alternative.
-2. TEXT INPUT: If "editable": true, use "clear" first if field has existing text, then "type".
+2. TEXT INPUT: ALWAYS include "coordinates" with "type" to focus the correct field. Without coordinates, text goes into whatever field was last focused — which may be WRONG. If "editable": true, use "clear" first if field has existing text, then "type".
 3. ALREADY TYPED: Check your previous actions. Do NOT re-type text you already entered.
 4. REPETITION: Do NOT tap the same coordinates twice in a row. If it didn't work, try something else.
 5. STUCK: If SCREEN_CHANGE says "NOT changed", your last action had no effect. Change strategy.
 6. APP LAUNCH: Use "launch" to directly open apps instead of hunting for icons on the home screen.
-7. SCREENSHOTS: Use "screenshot" to capture proof of completed tasks (order confirmations, etc).
+7. READ PAGES: Use "read_screen" to collect all text from a page (search results, articles, feeds). It scrolls automatically and copies everything to clipboard.
 8. LONG PRESS: Use "longpress" when you see "longClickable": true (context menus, copy/paste, etc).
-9. SCROLLING: If the item you need isn't visible, "swipe" up/down to scroll and find it.
+9. SCROLLING: If the item you need isn't visible, use "scroll" with direction "down" to see more below, or "up" for above.
 10. MULTI-APP: To switch apps, use "home" then "launch" the next app. Or use "back" to return.
 11. PASSWORDS: Never log or output the text of password fields.
 12. DONE: Say "done" as soon as the goal is achieved. Don't keep acting after success.
-13. SEARCH: After typing in a search field, use "enter" to submit the search.
+13. SUBMIT IN CHAT APPS: Use "submit_message" action instead of "enter" in chat apps. It finds and taps the Send button, waits for a response, and reports new content. Only use "enter" in search bars or web forms.
 14. SHARE: To send files/images between apps, use "launch" with uri + extras for Android intents.
-15. CLEANUP: If a popup/ad appears, dismiss it with "back" or tap the close button, then continue.`;
+15. CLEANUP: If a popup/ad appears, dismiss it with "back" or tap the close button, then continue.
+16. COPY-PASTE: PREFERRED: Use "copy_visible_text" action to copy text to clipboard programmatically — this bypasses unreliable UI Copy buttons entirely. Then switch apps and "paste".
+    ALTERNATIVE: Use "clipboard_set" with the text you see in SCREEN_CONTEXT, then switch apps and "paste".
+    FALLBACK: Just "type" the text directly into the target app field.
+    NEVER type a vague description — always use the actual text content.
+17. COORDINATES: ALWAYS use coordinates from SCREEN_CONTEXT elements (the "center" field). NEVER estimate or guess coordinates from screenshots — they are inaccurate. Screenshots help you understand the layout; SCREEN_CONTEXT provides the correct tap targets.
+18. BACK IS DESTRUCTIVE: NEVER use "back" to leave an app while you have a task in progress within it. You will LOSE all progress (typed text, loading responses, navigation state). Try all other in-app approaches first. Only use "back" after 5+ failed attempts within the app.
+19. LEARN FROM HISTORY: Before choosing an action, check your earlier turns. If "enter" failed to submit a query before, do NOT try "enter" again — find and tap the Send button. If specific coordinates didn't work, try different ones. Never repeat a strategy that already failed in this session.
+20. EMAIL COMPOSE: ALWAYS use "compose_email" action when filling email fields. It fills To, Subject, and Body in the correct order. Pass the recipient email in "query" and body text in "text" (or it pastes from clipboard). NEVER manually type/paste into email fields — you WILL put it in the wrong field.
+
+═══════════════════════════════════════════
+ADAPTIVE PROBLEM-SOLVING
+═══════════════════════════════════════════
+
+NEVER REPEAT A FAILING ACTION more than once. If an action doesn't produce the expected result after 1 attempt, STOP and try a completely different approach.
+
+SILENT SUCCESSES: Some actions succeed WITHOUT changing the screen:
+- Tapping "Copy", "Share", "Like", or "Bookmark" buttons often works silently.
+- If you tapped a Copy button and the screen didn't change, it likely WORKED. Move on to the next step instead of retrying.
+
+SCREEN_CONTEXT IS YOUR DATA: The text in SCREEN_CONTEXT elements is data you already have. You can use it directly in:
+- "clipboard_set" — to set clipboard contents programmatically (more reliable than UI copy)
+- "type" — to enter text directly into any field
+You do NOT need to "copy" text via UI — you already have it from SCREEN_CONTEXT.
+
+GOAL-ORIENTED THINKING: Focus on WHAT you need to accomplish, not on rigidly following planned steps. If a step fails, ask: "What was the PURPOSE of this step?" and find another way.
+- Goal says "copy and send as email"? If Copy fails, use clipboard_set with SCREEN_CONTEXT text, or type it directly in the email.
+- Goal says "search for X"? If enter doesn't submit, look for and tap the send/search button.
+- Goal says "open app X"? Use "launch" with package name instead of hunting for icons.
+
+SMART DECISION PRIORITIES: When multiple approaches can achieve the same result, prefer:
+1. Programmatic actions (clipboard_set, launch, shell) — most reliable, no UI dependency.
+2. Direct input (type, paste, enter) — reliable when field is focused.
+3. UI button interactions (tap, longpress) — LEAST reliable, depends on correct coordinates.
+Before choosing an action, ask: "Is there a simpler, more direct way to do this?"
+
+PATIENCE WITH LOADING: AI chatbots (ChatGPT, Gemini, Claude) take 5-15 seconds to generate responses. After submitting a query, use "wait" 2-3 times before assuming it failed. Do NOT start scrolling or navigating away prematurely.
+
+ESCAPE STUCK LOOPS — when stuck, try in this priority order:
+1. The action may have already succeeded silently — MOVE ON to the next task step.
+2. Use programmatic alternatives (clipboard_set, type, shell, launch with URI).
+3. Try a completely different UI element or interaction method.
+4. Navigate away (back, home) ONLY as an absolute last resort — this loses progress.`;
 
 // ===========================================
 // Chat Message Types (Phase 4A)
@@ -272,6 +326,25 @@ class OpenAIProvider implements LLMProvider {
 // OpenRouter Provider (Vercel AI SDK)
 // ===========================================
 
+/** Zod schema for structured LLM output — guarantees valid JSON */
+const actionDecisionSchema = z.object({
+  think: z.string().optional().describe("Your reasoning about the current screen state and what to do next"),
+  plan: z.array(z.string()).optional().describe("3-5 high-level steps to achieve the goal"),
+  planProgress: z.string().optional().describe("Which plan step you are currently on"),
+  action: z.string().describe("The action to take: tap, type, scroll, enter, back, home, wait, done, longpress, launch, clear, clipboard_get, clipboard_set, paste, shell, read_screen, submit_message, copy_visible_text, wait_for_content, find_and_tap, compose_email"),
+  coordinates: z.tuple([z.number(), z.number()]).optional().describe("Target field as [x, y] — used by tap, longpress, type, and paste"),
+  text: z.string().optional().describe("Text to type, clipboard text, or email body for compose_email"),
+  direction: z.string().optional().describe("Scroll direction: up, down, left, right"),
+  reason: z.string().optional().describe("Why you chose this action"),
+  package: z.string().optional().describe("App package name for launch action"),
+  activity: z.string().optional().describe("Activity name for launch action"),
+  uri: z.string().optional().describe("URI for launch action"),
+  extras: z.record(z.string(), z.string()).optional().describe("Intent extras for launch action"),
+  command: z.string().optional().describe("Shell command to run"),
+  filename: z.string().optional().describe("Screenshot filename"),
+  query: z.string().optional().describe("Email address for compose_email (REQUIRED), search term for find_and_tap (REQUIRED), or filter for copy_visible_text"),
+});
+
 class OpenRouterProvider implements LLMProvider {
   private openrouter: ReturnType<typeof createOpenRouter>;
   private model: string;
@@ -313,24 +386,34 @@ class OpenRouterProvider implements LLMProvider {
 
   async getDecision(messages: ChatMessage[]): Promise<ActionDecision> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const result = await generateText({
+    const { object } = await generateObject({
       model: this.openrouter.chat(this.model),
+      schema: actionDecisionSchema,
       system,
       messages: converted as any,
     });
-    return parseJsonResponse(result.text);
+    // Sanitize coordinates from structured output
+    const decision = object as ActionDecision;
+    decision.coordinates = sanitizeCoordinates(decision.coordinates);
+    return decision;
   }
 
   async *getDecisionStream(messages: ChatMessage[]): AsyncIterable<string> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const result = streamText({
+    const { partialObjectStream } = streamObject({
       model: this.openrouter.chat(this.model),
+      schema: actionDecisionSchema,
       system,
       messages: converted as any,
     });
-    for await (const chunk of result.textStream) {
-      yield chunk;
+    // Accumulate partial objects and yield the final complete one as JSON
+    let lastObject: any = {};
+    for await (const partial of partialObjectStream) {
+      lastObject = partial;
+      // Yield a dot for progress indication (streaming UI feedback)
+      yield ".";
     }
+    yield JSON.stringify(lastObject);
   }
 }
 
@@ -502,22 +585,39 @@ class BedrockProvider implements LLMProvider {
 // Shared JSON Parsing
 // ===========================================
 
+/**
+ * Sanitizes raw LLM text so it can be parsed as JSON.
+ * LLMs often put literal newlines inside JSON string values which breaks JSON.parse().
+ */
+function sanitizeJsonText(raw: string): string {
+  return raw.replace(/\n/g, " ").replace(/\r/g, " ");
+}
+
 function parseJsonResponse(text: string): ActionDecision {
+  let decision: ActionDecision | null = null;
   try {
-    return JSON.parse(text);
+    decision = JSON.parse(text);
   } catch {
-    // Try to extract JSON from markdown code blocks or mixed text
-    const match = text.match(/\{[\s\S]*?\}/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        // fall through
+    try {
+      decision = JSON.parse(sanitizeJsonText(text));
+    } catch {
+      // Try to extract JSON from markdown code blocks or mixed text
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          decision = JSON.parse(sanitizeJsonText(match[0]));
+        } catch {
+          // fall through
+        }
       }
     }
+  }
+  if (!decision) {
     console.log(`Warning: Could not parse LLM response: ${text.slice(0, 200)}`);
     return { action: "wait", reason: "Failed to parse response, waiting" };
   }
+  decision.coordinates = sanitizeCoordinates(decision.coordinates);
+  return decision;
 }
 
 // ===========================================

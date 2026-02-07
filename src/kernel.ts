@@ -32,9 +32,11 @@ import {
   getScreenResolution,
   getForegroundApp,
   initDeviceContext,
+  sanitizeCoordinates,
   type ActionDecision,
   type ActionResult,
 } from "./actions.js";
+import { executeSkill } from "./skills.js";
 import {
   getLlmProvider,
   trimMessages,
@@ -168,22 +170,47 @@ async function getDecisionStreaming(
   return parseJsonResponse(accumulated);
 }
 
-/** Simple JSON parser with markdown fallback (duplicated from llm-providers for streaming path) */
+/**
+ * Sanitizes raw LLM text so it can be parsed as JSON.
+ * LLMs often put literal newlines inside JSON string values which breaks JSON.parse().
+ * This replaces unescaped newlines inside strings with spaces.
+ */
+function sanitizeJsonText(raw: string): string {
+  // Replace literal newlines/carriage returns with spaces — valid JSON
+  // doesn't require newlines, and LLMs often embed them in string values.
+  return raw.replace(/\n/g, " ").replace(/\r/g, " ");
+}
+
+/** JSON parser with newline sanitization and markdown fallback (for streaming path) */
 function parseJsonResponse(text: string): ActionDecision {
+  let decision: ActionDecision | null = null;
+
+  // First try raw text
   try {
-    return JSON.parse(text);
+    decision = JSON.parse(text);
   } catch {
-    const match = text.match(/\{[\s\S]*?\}/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        // fall through
+    // Try after sanitizing newlines
+    try {
+      decision = JSON.parse(sanitizeJsonText(text));
+    } catch {
+      // Try extracting JSON block from markdown or surrounding text
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          decision = JSON.parse(sanitizeJsonText(match[0]));
+        } catch {
+          // fall through
+        }
       }
     }
+  }
+
+  if (!decision) {
     console.log(`Warning: Could not parse streamed response: ${text.slice(0, 200)}`);
     return { action: "wait", reason: "Failed to parse response, waiting" };
   }
+  decision.coordinates = sanitizeCoordinates(decision.coordinates);
+  return decision;
 }
 
 // ===========================================
@@ -226,6 +253,8 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
 
   let prevElements: UIElement[] = [];
   let stuckCount = 0;
+  let recentActions: string[] = []; // Sliding window of action signatures for repetition detection
+  let lastActionFeedback = ""; // Result of previous action to feed back to LLM
 
   for (let step = 0; step < steps; step++) {
     console.log(`\n--- Step ${step + 1}/${steps} ---`);
@@ -257,11 +286,31 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
           console.log(
             `Stuck for ${stuckCount} steps. Injecting recovery hint.`
           );
-          diffContext +=
-            `\nWARNING: You have been stuck for ${stuckCount} steps. ` +
-            `The screen is NOT changing. Try a DIFFERENT action: ` +
-            `swipe to scroll, press back, go home, or launch a different app.` +
-            `\nYour plan is not working. Create a NEW plan with a different approach.`;
+
+          // Context-aware recovery hints based on what actions are failing
+          const failingTypes = new Set(
+            recentActions.slice(-stuckCount).map((a) => a.split("(")[0])
+          );
+
+          let hint = `\nWARNING: You have been stuck for ${stuckCount} steps. The screen is NOT changing.`;
+
+          if (failingTypes.has("tap") || failingTypes.has("longpress")) {
+            hint +=
+              `\nYour tap/press actions are having NO EFFECT. Likely causes:` +
+              `\n- The action SUCCEEDED SILENTLY (copy/share/like buttons often work without screen changes). If so, MOVE ON to the next step.` +
+              `\n- The element is not actually interactive at those coordinates.` +
+              `\n- USE "clipboard_set" to set clipboard text directly instead of UI copy buttons.` +
+              `\n- Or just "type" the text directly in the target app — you already have the text from SCREEN_CONTEXT.`;
+          }
+          if (failingTypes.has("swipe") || failingTypes.has("scroll")) {
+            hint +=
+              `\nSwiping is having no effect — you may be at the end of scrollable content. Try interacting with visible elements or navigate with "back"/"home".`;
+          }
+
+          hint +=
+            `\nYour plan is NOT working. You MUST create a completely NEW plan with a different approach. Think about the underlying GOAL, not the specific steps that failed.`;
+
+          diffContext += hint;
         }
       } else {
         stuckCount = 0;
@@ -269,13 +318,52 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
     }
     prevElements = elements;
 
-    // 3. Vision: capture screenshot based on VISION_MODE
+    // 2B. Repetition detection (persists across screen changes — catches retry loops)
+    if (recentActions.length >= 3) {
+      const freq = new Map<string, number>();
+      for (const a of recentActions) freq.set(a, (freq.get(a) ?? 0) + 1);
+      const [topAction, topCount] = [...freq.entries()].reduce(
+        (a, b) => (b[1] > a[1] ? b : a),
+        ["", 0]
+      );
+      if (topCount >= 3) {
+        diffContext +=
+          `\nREPETITION_ALERT: You have attempted "${topAction}" ${topCount} times in recent steps. ` +
+          `This action is clearly NOT working — do NOT attempt it again.`;
+        if (topAction.includes("tap") || topAction.includes("longpress")) {
+          diffContext +=
+            ` ALTERNATIVES: (1) If you were copying text, the copy likely already succeeded — move on to the next step. ` +
+            `(2) Use "clipboard_set" with the text from SCREEN_CONTEXT to set clipboard directly. ` +
+            `(3) Use "type" to enter text directly in the target app. ` +
+            `(4) Navigate away with "back" or "home" and try a different path.`;
+        }
+      }
+    }
+
+    // 2C. Drift detection — agent is floundering (swipe/back/wait/screenshot spam)
+    if (recentActions.length >= 4) {
+      const navigationActions = new Set(["swipe", "scroll", "back", "home", "wait"]);
+      const navCount = recentActions
+        .slice(-5)
+        .filter((a) => navigationActions.has(a.split("(")[0])).length;
+      if (navCount >= 4) {
+        diffContext +=
+          `\nDRIFT_WARNING: Your last ${navCount} actions were all navigation/waiting (swipe, back, wait, screenshot) with no direct interaction. ` +
+          `You are not making progress. STOP scrolling/navigating and take a DIRECT action: ` +
+          `tap a specific button from SCREEN_CONTEXT, use "type" to enter text, or use "clipboard_set". ` +
+          `If you need to submit a query in a chat app, find the Send button in SCREEN_CONTEXT and tap it.`;
+      }
+    }
+
+    // 3. Vision: capture screenshot based on VISION_MODE or stuck recovery
     let screenshotBase64: string | null = null;
     let visionContext = "";
 
+    const isStuckVision = stuckCount >= 2; // Send screenshot after 2 unchanged steps
     const shouldCaptureVision =
       Config.VISION_MODE === "always" ||
-      (Config.VISION_MODE === "fallback" && elements.length === 0);
+      (Config.VISION_MODE === "fallback" && elements.length === 0) ||
+      isStuckVision;
 
     if (shouldCaptureVision) {
       screenshotBase64 = captureScreenshotBase64();
@@ -285,9 +373,16 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
           "A screenshot has been captured. The screen likely contains custom-drawn " +
           "content (game, WebView, or Flutter). Try using coordinate-based taps on " +
           "common UI positions, or use 'back'/'home' to navigate away.";
+      } else if (isStuckVision) {
+        visionContext =
+          "\n\nVISION_ASSIST: You have been stuck — a screenshot is attached. " +
+          "Use the screenshot to VISUALLY identify the correct field positions, " +
+          "buttons, and layout. The accessibility tree may be misleading about " +
+          "which field is which. Trust what you SEE in the screenshot over the " +
+          "element coordinates when they conflict.";
       }
       if (screenshotBase64 && llm.capabilities.supportsImages) {
-        console.log("Sending screenshot to LLM");
+        console.log(isStuckVision ? "Stuck — sending screenshot for visual assist" : "Sending screenshot to LLM");
       }
     }
 
@@ -295,8 +390,11 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
     const foregroundLine = foregroundApp
       ? `FOREGROUND_APP: ${foregroundApp}\n\n`
       : "";
+    const actionFeedbackLine = lastActionFeedback
+      ? `LAST_ACTION_RESULT: ${lastActionFeedback}\n\n`
+      : "";
     const textContent =
-      `GOAL: ${goal}\n\n${foregroundLine}SCREEN_CONTEXT:\n${screenContext}${diffContext}${visionContext}`;
+      `GOAL: ${goal}\n\n${foregroundLine}${actionFeedbackLine}SCREEN_CONTEXT:\n${screenContext}${diffContext}${visionContext}`;
 
     // Build content parts (text + optional image)
     const userContent: ContentPart[] = [{ type: "text", text: textContent }];
@@ -343,11 +441,16 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
       content: JSON.stringify(decision),
     });
 
-    // 6. Action: Execute the decision
+    // 6. Action: Execute the decision (multi-step actions or basic actions)
+    const MULTI_STEP_ACTIONS = ["read_screen", "submit_message", "copy_visible_text", "wait_for_content", "find_and_tap", "compose_email"];
     const actionStart = performance.now();
     let result: ActionResult;
     try {
-      result = executeAction(decision);
+      if (MULTI_STEP_ACTIONS.includes(decision.action)) {
+        result = executeSkill(decision, elements);
+      } else {
+        result = executeAction(decision);
+      }
     } catch (err) {
       console.log(`Action Error: ${(err as Error).message}`);
       result = { success: false, message: (err as Error).message };
@@ -365,6 +468,16 @@ async function runAgent(goal: string, maxSteps?: number): Promise<void> {
       Math.round(llmLatency),
       Math.round(actionLatency)
     );
+
+    // Track action signature for repetition detection
+    const actionSig = decision.coordinates
+      ? `${decision.action}(${decision.coordinates.join(",")})`
+      : decision.action;
+    recentActions.push(actionSig);
+    if (recentActions.length > 8) recentActions.shift();
+
+    // Capture action result feedback for next iteration
+    lastActionFeedback = `${actionSig} → ${result.success ? "OK" : "FAILED"}: ${result.message}`;
 
     console.log(`Messages in context: ${trimmed.length}`);
 

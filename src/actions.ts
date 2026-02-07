@@ -2,9 +2,10 @@
  * Action execution module for DroidClaw.
  * Handles all ADB commands for interacting with Android devices.
  *
- * Supported actions:
+ * Supported actions (21):
  *   tap, type, enter, swipe, home, back, wait, done,
- *   longpress, screenshot, launch, clear, clipboard_get, clipboard_set, shell
+ *   longpress, screenshot, launch, clear, clipboard_get, clipboard_set, paste, shell,
+ *   submit_message, copy_visible_text, wait_for_content, find_and_tap, compose_email
  */
 
 import { Config } from "./config.js";
@@ -15,6 +16,7 @@ import {
   KEYCODE_DEL,
   KEYCODE_MOVE_HOME,
   KEYCODE_MOVE_END,
+  KEYCODE_PASTE,
   SWIPE_COORDS,
   SWIPE_DURATION_MS,
   LONG_PRESS_DURATION_MS,
@@ -42,6 +44,9 @@ export interface ActionDecision {
   think?: string;
   plan?: string[];
   planProgress?: string;
+  // multi-step action fields (Phase 6)
+  skill?: string; // legacy: kept for backward compat, prefer action field directly
+  query?: string; // email address for compose_email, search term for find_and_tap/copy_visible_text
 }
 
 export interface ActionResult {
@@ -138,7 +143,7 @@ export function initDeviceContext(resolution: [number, number]): void {
 }
 
 /** Returns dynamic swipe coords if set, otherwise falls back to hardcoded defaults. */
-function getSwipeCoords(): Record<string, [number, number, number, number]> {
+export function getSwipeCoords(): Record<string, [number, number, number, number]> {
   return dynamicSwipeCoords ?? SWIPE_COORDS;
 }
 
@@ -175,8 +180,12 @@ export function executeAction(action: ActionDecision): ActionResult {
       return executeClipboardGet();
     case "clipboard_set":
       return executeClipboardSet(action);
+    case "paste":
+      return executePaste(action);
     case "shell":
       return executeShell(action);
+    case "scroll":
+      return executeScroll(action);
     default:
       console.log(`Warning: Unknown action: ${action.action}`);
       return { success: false, message: `Unknown action: ${action.action}` };
@@ -184,11 +193,95 @@ export function executeAction(action: ActionDecision): ActionResult {
 }
 
 // ===========================================
+// Coordinate Validation & Sanitization
+// ===========================================
+
+/**
+ * Sanitizes coordinates from the LLM response.
+ * Handles: normal arrays, string values, single-element arrays with concatenated digits.
+ * Returns a proper [x, y] tuple or undefined if unrecoverable.
+ */
+export function sanitizeCoordinates(
+  raw: unknown
+): [number, number] | undefined {
+  if (raw == null) return undefined;
+
+  // Normal case: [x, y] array with two numbers
+  if (Array.isArray(raw) && raw.length >= 2) {
+    const x = Number(raw[0]);
+    const y = Number(raw[1]);
+    if (Number.isFinite(x) && Number.isFinite(y) && x <= 10000 && y <= 10000) {
+      return [Math.round(x), Math.round(y)];
+    }
+  }
+
+  // Single-element array with concatenated number, e.g. [8282017] → [828, 2017]
+  if (Array.isArray(raw) && raw.length === 1) {
+    const split = trySplitConcatenated(Number(raw[0]));
+    if (split) return split;
+  }
+
+  // Plain concatenated number (not in array)
+  if (typeof raw === "number" && raw > 10000) {
+    const split = trySplitConcatenated(raw);
+    if (split) return split;
+  }
+
+  // String like "828, 2017" or "828 2017"
+  if (typeof raw === "string") {
+    const parts = (raw as string).split(/[,\s]+/).map(Number);
+    if (parts.length >= 2 && parts.every(Number.isFinite)) {
+      return [Math.round(parts[0]), Math.round(parts[1])];
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Tries to split a concatenated number like 8282017 into [828, 2017].
+ * Attempts splits at positions 2, 3, and 4 digits for the x value.
+ */
+function trySplitConcatenated(n: number): [number, number] | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const s = String(Math.round(n));
+  // Try splitting at different positions (x is typically 2-4 digits)
+  for (let i = 2; i <= Math.min(4, s.length - 2); i++) {
+    const x = parseInt(s.slice(0, i), 10);
+    const y = parseInt(s.slice(i), 10);
+    if (x > 0 && x <= 3000 && y > 0 && y <= 5000) {
+      return [x, y];
+    }
+  }
+  return null;
+}
+
+/**
+ * Validates coordinates are reasonable before executing ADB.
+ * Returns [x, y] if valid, or null.
+ */
+function validateCoordinates(
+  coords: [number, number] | undefined
+): [number, number] | null {
+  if (!coords || !Array.isArray(coords) || coords.length < 2) return null;
+  const [x, y] = coords;
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (x < 0 || y < 0 || x > 10000 || y > 10000) return null;
+  return [Math.round(x), Math.round(y)];
+}
+
+// ===========================================
 // Original actions (enhanced)
 // ===========================================
 
 function executeTap(action: ActionDecision): ActionResult {
-  const [x, y] = action.coordinates ?? [0, 0];
+  const coords = validateCoordinates(action.coordinates);
+  if (!coords) {
+    console.log(`Invalid tap coordinates: ${JSON.stringify(action.coordinates)}`);
+    return { success: false, message: `Invalid coordinates: ${JSON.stringify(action.coordinates)}` };
+  }
+  const [x, y] = coords;
   console.log(`Tapping: (${x}, ${y})`);
   runAdbCommand(["shell", "input", "tap", String(x), String(y)]);
   return { success: true, message: `Tapped (${x}, ${y})` };
@@ -197,6 +290,17 @@ function executeTap(action: ActionDecision): ActionResult {
 function executeType(action: ActionDecision): ActionResult {
   const text = action.text ?? "";
   if (!text) return { success: false, message: "No text to type" };
+
+  // If coordinates are provided, tap the field first to focus it
+  if (action.coordinates) {
+    const coords = validateCoordinates(action.coordinates);
+    if (coords) {
+      console.log(`Focusing field: (${coords[0]}, ${coords[1]})`);
+      runAdbCommand(["shell", "input", "tap", String(coords[0]), String(coords[1])]);
+      Bun.sleepSync(300); // Brief pause for focus to register
+    }
+  }
+
   // ADB requires %s for spaces, escape special shell characters
   const escapedText = text
     .replaceAll("\\", "\\\\")
@@ -267,7 +371,12 @@ function executeDone(action: ActionDecision): ActionResult {
  * Long press at coordinates (opens context menus, triggers drag mode, etc.)
  */
 function executeLongPress(action: ActionDecision): ActionResult {
-  const [x, y] = action.coordinates ?? [0, 0];
+  const coords = validateCoordinates(action.coordinates);
+  if (!coords) {
+    console.log(`Invalid longpress coordinates: ${JSON.stringify(action.coordinates)}`);
+    return { success: false, message: `Invalid coordinates: ${JSON.stringify(action.coordinates)}` };
+  }
+  const [x, y] = coords;
   console.log(`Long pressing: (${x}, ${y})`);
   // A swipe from the same point to the same point with long duration = long press
   runAdbCommand([
@@ -376,6 +485,52 @@ function executeClipboardSet(action: ActionDecision): ActionResult {
   console.log(`Setting clipboard: ${text.slice(0, 50)}...`);
   runAdbCommand(["shell", "cmd", "clipboard", "set-text", text]);
   return { success: true, message: `Clipboard set to "${text.slice(0, 50)}"` };
+}
+
+/**
+ * Pastes clipboard content into the focused field.
+ * Optionally taps coordinates first to focus the target field.
+ */
+function executePaste(action: ActionDecision): ActionResult {
+  // If coordinates provided, tap to focus the target field first
+  if (action.coordinates) {
+    const coords = validateCoordinates(action.coordinates);
+    if (coords) {
+      console.log(`Focusing field: (${coords[0]}, ${coords[1]})`);
+      runAdbCommand(["shell", "input", "tap", String(coords[0]), String(coords[1])]);
+      Bun.sleepSync(300);
+    }
+  }
+  console.log("Pasting from clipboard");
+  runAdbCommand(["shell", "input", "keyevent", KEYCODE_PASTE]);
+  return { success: true, message: "Pasted clipboard content" };
+}
+
+/**
+ * Scrolls the screen. Direction is from the user's perspective:
+ * "down" = see more content below (swipe up), "up" = see content above (swipe down).
+ */
+const SCROLL_TO_SWIPE: Record<string, string> = {
+  down: "up",    // scroll down = swipe up
+  up: "down",    // scroll up = swipe down
+  left: "right", // scroll left = swipe right
+  right: "left", // scroll right = swipe left
+};
+
+function executeScroll(action: ActionDecision): ActionResult {
+  const direction = action.direction ?? "down";
+  const swipeDir = SCROLL_TO_SWIPE[direction] ?? "up";
+  const swipeCoords = getSwipeCoords();
+  const coords = swipeCoords[swipeDir] ?? swipeCoords["up"];
+
+  console.log(`Scrolling ${direction}`);
+  runAdbCommand([
+    "shell", "input", "swipe",
+    String(coords[0]), String(coords[1]),
+    String(coords[2]), String(coords[3]),
+    SWIPE_DURATION_MS,
+  ]);
+  return { success: true, message: `Scrolled ${direction}` };
 }
 
 /**
