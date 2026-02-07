@@ -1,0 +1,22 @@
+{
+  "name": "Weather Update to WhatsApp",
+  "steps": [
+    {
+      "app": "com.google.android.googlequicksearchbox",
+      "goal": "The Google app is now open. On the main screen, find and tap the 'AI Mode' text button (not the search bar, not the weather widget). This will take you to the AI chat screen.",
+      "maxSteps": 5
+    },
+    {
+      "goal": "You are now on the AI Mode screen. Find and tap the text input field. Type exactly this text: 'Chennai today weather' — do NOT type anything else. Then find and tap the send/submit button. Wait for the AI response to fully load.",
+      "maxSteps": 10
+    },
+    {
+      "goal": "The AI has responded with weather information. Look for a Share button on the response (it may be a share icon). Tap the Share button. This will open the Android share sheet showing apps like WhatsApp, Instagram, etc.",
+      "maxSteps": 8
+    },
+    {
+      "goal": "The Android share sheet is now open showing a list of apps. Find and tap 'WhatsApp' from the list. If you don't see it, scroll down to find it. Once WhatsApp opens, it will show a contact list. Look for 'Sanju' in the contact/chat list. If Sanju is not visible, scroll down to find the name. Tap on 'Sanju' to select, then find and tap the Send button to share the weather info.",
+      "maxSteps": 15
+    }
+  ]
+}
