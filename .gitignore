@@ -4,3 +4,7 @@ dist/
 bun.lock
 .env
 competitor/
+logs/
+kernel_screenshot.png
+window_dump.xml
+docs/architecture-web-flow.md

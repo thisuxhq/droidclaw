@@ -1,237 +1,142 @@
-# DroidClaw
+# droidclaw
 
-Give it a goal in plain English. It figures out what to tap, type, and swipe on your Android phone to get it done.
+ai agent that controls your android phone. give it a goal in plain english — it figures out what to tap, type, and swipe.
 
-It reads the screen (accessibility tree + optional screenshot), sends it to an LLM, gets back a JSON action like `{"action": "tap", "coordinates": [540, 1200]}`, executes it via ADB, and repeats. Perception → reasoning → action, in a loop.
-
-## See it work
+reads the screen (accessibility tree + optional screenshot), asks an llm what to do, executes via adb, repeats.
 
 ```
 $ bun run src/kernel.ts
-Enter your goal: Open YouTube and search for "lofi hip hop"
+enter your goal: open youtube and search for "lofi hip hop"
 
---- Step 1/30 ---
-Think: I'm on the home screen. I should launch YouTube directly.
-Decision: launch — Open YouTube app (842ms)
+--- step 1/30 ---
+think: i'm on the home screen. launching youtube.
+action: launch (842ms)
 
---- Step 2/30 ---
-Think: YouTube is open. I need to tap the search icon.
-Decision: tap — Tap search icon at top right (623ms)
+--- step 2/30 ---
+think: youtube is open. tapping search icon.
+action: tap (623ms)
 
---- Step 3/30 ---
-Think: Search field is focused and ready.
-Decision: type — Type "lofi hip hop" (501ms)
+--- step 3/30 ---
+think: search field focused.
+action: type "lofi hip hop" (501ms)
 
---- Step 4/30 ---
-Decision: enter — Submit the search (389ms)
+--- step 4/30 ---
+action: enter (389ms)
 
---- Step 5/30 ---
-Think: Search results showing lofi hip hop videos. Done.
-Decision: done (412ms)
-
-Task completed successfully.
+--- step 5/30 ---
+think: search results showing. done.
+action: done (412ms)
 ```
 
-## Quick start
+## setup
 
-You need: **Bun**, **ADB**, and an **API key** for any LLM provider.
+you need **bun**, **adb**, and an api key for any llm provider.
 
 ```bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-
-# Install ADB (macOS)
-brew install android-platform-tools
-
-# Clone and setup
 bun install
 cp .env.example .env
 ```
 
-Edit `.env` — fastest way to start is with Groq (free tier):
+edit `.env` — fastest way to start is with groq (free tier):
 
 ```bash
 LLM_PROVIDER=groq
 GROQ_API_KEY=gsk_your_key_here
 ```
 
-Get your key at [console.groq.com](https://console.groq.com).
-
-### Connect your phone
-
-Enable USB Debugging: Settings → About Phone → tap "Build Number" 7 times → Developer Options → USB Debugging.
+connect your phone (usb debugging on):
 
 ```bash
 adb devices   # should show your device
-```
-
-### Run it
-
-```bash
 bun run src/kernel.ts
 ```
 
-Type a goal and watch your phone do it.
+## workflows
 
-## Workflows
-
-Workflows chain multiple goals across apps. Way more powerful than single goals.
+chain goals across apps:
 
 ```bash
 bun run src/kernel.ts --workflow examples/weather-to-whatsapp.json
 ```
 
-### 34 ready-to-use workflows included
-
-**Messaging** — whatsapp-reply, whatsapp-broadcast, whatsapp-to-email, telegram-channel-digest, telegram-send-message, slack-standup, slack-check-messages, email-digest, email-reply, translate-and-reply
-
-**Social Media** — social-media-post (Twitter + LinkedIn), social-media-engage, instagram-post-check
-
-**Productivity** — morning-briefing, calendar-create-event, notes-capture, notification-cleanup, do-not-disturb, github-check-prs, screenshot-share-slack
-
-**Research** — google-search-report, news-roundup, multi-app-research, price-comparison
-
-**Lifestyle** — food-order, uber-ride, maps-commute, check-flight-status, spotify-playlist, youtube-watch-later, fitness-log, expense-tracker, wifi-password-share, weather-to-whatsapp
-
-Each workflow is a simple JSON file:
+each workflow is a simple json file:
 
 ```json
 {
-  "name": "Slack Daily Standup",
+  "name": "slack standup",
   "steps": [
     {
       "app": "com.Slack",
-      "goal": "Open #standup channel, type the standup message and send it.",
-      "formData": {
-        "Message": "Yesterday: Finished API integration\nToday: Writing tests\nBlockers: None"
-      }
+      "goal": "open #standup channel, type the message and send it",
+      "formData": { "Message": "yesterday: api integration\ntoday: tests\nblockers: none" }
     }
   ]
 }
 ```
 
-## What it can do
+35 ready-to-use workflows in `examples/` — messaging, social media, productivity, research, lifestyle.
 
-22 actions + 6 multi-step skills. Some example goals:
+## deterministic flows
 
-```
-Open WhatsApp and send "I'm running late" to Mom
-Turn on WiFi
-Search Google for "best restaurants near me"
-Open YouTube and play the first trending video
-Copy tracking number from Amazon and search it on Google
-```
-
-## LLM providers
-
-Pick one. They all work.
-
-| Provider | Cost | Vision | Best for |
-|---|---|---|---|
-| **Groq** | Free tier | No | Getting started fast |
-| **OpenRouter** | Pay per token | Yes | 200+ models (Claude, Gemini, etc.) |
-| **OpenAI** | Pay per token | Yes | Best accuracy with GPT-4o |
-| **AWS Bedrock** | Pay per token | Yes | Enterprise / Claude on AWS |
+for repeatable tasks that don't need ai, use yaml flows:
 
 ```bash
-# Groq (recommended to start)
-LLM_PROVIDER=groq
-GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-
-# OpenRouter
-LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=sk-or-v1-your_key_here
-OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
-
-# OpenAI
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-your_key_here
-OPENAI_MODEL=gpt-4o
-
-# AWS Bedrock (uses aws configure credentials)
-LLM_PROVIDER=bedrock
-AWS_REGION=us-east-1
-BEDROCK_MODEL=anthropic.claude-3-sonnet-20240229-v1:0
+bun run src/kernel.ts --flow examples/flows/send-whatsapp.yaml
 ```
 
-## Config
+no llm calls, just step-by-step adb commands.
 
-All in `.env`. Here's what matters:
+## providers
 
-| Setting | Default | What it does |
+| provider | cost | vision | notes |
+|---|---|---|---|
+| groq | free tier | no | fastest to start |
+| openrouter | per token | yes | 200+ models |
+| openai | per token | yes | gpt-4o |
+| bedrock | per token | yes | claude on aws |
+
+## config
+
+all in `.env`:
+
+| key | default | what |
 |---|---|---|
-| `MAX_STEPS` | 30 | Steps before giving up |
-| `STEP_DELAY` | 2 | Seconds between actions (UI settle time) |
-| `STUCK_THRESHOLD` | 3 | Steps before stuck-loop recovery kicks in |
-| `VISION_MODE` | fallback | `off` / `fallback` (screenshot when accessibility tree is empty) / `always` |
-| `MAX_ELEMENTS` | 40 | UI elements sent to LLM (scored & ranked) |
-| `MAX_HISTORY_STEPS` | 10 | Past steps kept in conversation context |
-| `STREAMING_ENABLED` | true | Stream LLM responses token-by-token |
-| `LOG_DIR` | logs | Session logs directory |
+| `MAX_STEPS` | 30 | steps before giving up |
+| `STEP_DELAY` | 2 | seconds between actions |
+| `STUCK_THRESHOLD` | 3 | steps before stuck recovery |
+| `VISION_MODE` | fallback | `off` / `fallback` / `always` |
+| `MAX_ELEMENTS` | 40 | ui elements sent to llm |
 
-## How it works
+## how it works
 
-Each step: dump accessibility tree → score & filter elements → optionally screenshot → send to LLM → execute action → log → repeat.
+each step: dump accessibility tree → filter elements → send to llm → execute action → repeat.
 
-The LLM thinks before acting:
+the llm thinks before acting — returns `{ think, plan, action }`. if the screen doesn't change for 3 steps, stuck recovery kicks in. when the accessibility tree is empty (webviews, flutter), it falls back to screenshots.
 
-```json
-{
-  "think": "Search field is focused. I should type the query.",
-  "plan": ["Launch YouTube", "Tap search", "Type query", "Submit"],
-  "planProgress": "Step 3: typing query",
-  "action": "type",
-  "text": "lofi hip hop"
-}
-```
-
-**Stuck detection** — if the screen doesn't change for 3 steps, the kernel tells the LLM to try a different approach.
-
-**Vision fallback** — when the accessibility tree is empty (games, WebViews, Flutter), it falls back to sending a screenshot.
-
-**Conversation memory** — the LLM sees its full history of observations and decisions, so it won't repeat itself.
-
-## Architecture
+## source
 
 ```
 src/
-  kernel.ts          — Main agent loop
-  actions.ts         — 22 actions + ADB retry logic
-  skills.ts          — 6 multi-step skills (read_screen, submit_message, etc.)
-  workflow.ts        — Workflow orchestration engine
-  llm-providers.ts   — 4 LLM providers + system prompt
-  sanitizer.ts       — Accessibility XML parser + smart filtering
-  config.ts          — Env config
-  constants.ts       — Keycodes, coordinates, defaults
-  logger.ts          — Session logging
+  kernel.ts          main loop
+  actions.ts         22 actions + adb retry
+  skills.ts          6 multi-step skills
+  workflow.ts        workflow orchestration
+  flow.ts            yaml flow runner
+  llm-providers.ts   4 providers + system prompt
+  sanitizer.ts       accessibility xml parser
+  config.ts          env config
+  constants.ts       keycodes, coordinates
+  logger.ts          session logging
 ```
 
-## Commands
+## troubleshooting
 
-```bash
-bun install              # Install dependencies
-bun run src/kernel.ts    # Start the agent
-bun run build            # Compile to dist/
-bun run typecheck        # Type-check (tsc --noEmit)
-```
+**"adb: command not found"** — install adb or set `ADB_PATH` in `.env`
 
-## Troubleshooting
+**"no devices found"** — check usb debugging is on, tap "allow" on the phone
 
-**"adb: command not found"** — Install ADB or set `ADB_PATH=/full/path/to/adb` in `.env`.
+**agent repeating** — stuck detection handles this. if it persists, use a better model
 
-**"no devices found"** — Run `adb devices`. Check USB debugging is enabled and you tapped "Allow" on the phone.
+## license
 
-**Agent keeps repeating the same action** — Stuck loop detection handles this automatically. If it persists, try a more capable model (GPT-4o, Claude).
-
-**High token usage** — Set `VISION_MODE=off`, lower `MAX_ELEMENTS` to 20, lower `MAX_HISTORY_STEPS` to 5, or use a cheaper model.
-
-## Docs
-
-- [Use Cases](docs/use-cases.md) — 50+ examples across 15 categories
-- [ADB Commands](docs/adb-commands.md) — 750+ shell commands reference
-- [Capabilities & Limitations](docs/capabilities-and-limitations.md)
-
-## License
-
-MIT
+mit
