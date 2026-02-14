@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>droidclaw - ai agent for android</title>
+  <meta name="description" content="turn old android phones into ai agents. give it a goal in plain english - it figures out what to tap, type, and swipe.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.3.0/dist/iconify-icon.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --text: #ededed;
+      --text-secondary: #a1a1a1;
+      --text-muted: #555;
+      --bg: #000;
+      --bg-elevated: #0a0a0a;
+      --bg-card: #111;
+      --border: #222;
+      --border-hover: #333;
+      --accent: #3291ff;
+      --accent-soft: rgba(50, 145, 255, 0.08);
+      --accent-border: rgba(50, 145, 255, 0.15);
+      --green: #50e3c2;
+      --yellow: #f5a623;
+      --red: #ee0000;
+      --cyan: #22d3ee;
+      --purple: #a855f7;
+      --orange: #f97316;
+      --pink: #ec4899;
+      --amber: #fbbf24;
+      --indigo: #818cf8;
+      --coral: #f97066;
+      --lime: #a3e635;
+      --radius: 12px;
+      --max-w: 960px;
+      --max-w-narrow: 680px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── nav ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(0,0,0,.8);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .inner {
+      max-width: var(--max-w); margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 56px;
+    }
+    nav .logo { font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; letter-spacing: -.5px; }
+    nav .logo span { color: var(--text-muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+    nav .links { display: flex; gap: 20px; align-items: center; }
+    nav .links a { color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: color .15s; }
+    nav .links a:hover { color: var(--text); }
+    nav .gh-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--text); color: var(--bg); font-weight: 600; font-size: 13px;
+      padding: 6px 14px; border-radius: 6px; text-decoration: none; transition: opacity .15s;
+    }
+    nav .gh-btn:hover { opacity: .85; text-decoration: none; }
+    .menu-toggle {
+      display: none; background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); padding: 6px 8px; cursor: pointer; line-height: 0;
+    }
+
+    /* ─── layout ─── */
+    .wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+    .wrap-narrow { max-width: var(--max-w-narrow); margin: 0 auto; padding: 0 24px; }
+    section { padding: 80px 0; }
+    .section-divider { height: 1px; background: var(--border); max-width: var(--max-w); margin: 0 auto; }
+
+    /* ─── typography ─── */
+    h1 { font-size: 48px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.15; }
+    h2 { font-size: 28px; font-weight: 700; letter-spacing: -.75px; line-height: 1.3; }
+    h3 { font-size: 16px; font-weight: 600; }
+    p { color: var(--text-secondary); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .section-label {
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;
+      margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-label iconify-icon { font-size: 16px; }
+    .section-desc { font-size: 16px; line-height: 1.7; color: var(--text-secondary); margin-top: 12px; max-width: 560px; }
+
+    /* ─── hero ─── */
+    .hero {
+      padding: 100px 0 80px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(50,145,255,.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border);
+      font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 20px; margin-bottom: 24px;
+    }
+    .hero h1 { margin: 0 auto 20px; max-width: 600px; }
+    .hero h1 .glow { color: var(--accent); }
+    .hero .subtitle {
+      font-size: 17px; line-height: 1.75; color: var(--text-secondary);
+      max-width: 520px; margin: 0 auto 32px;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--text); color: var(--bg); font-weight: 600; font-size: 14px;
+      padding: 10px 22px; border-radius: 8px; text-decoration: none; transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .85; text-decoration: none; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent; color: var(--text-secondary); font-weight: 500; font-size: 14px;
+      padding: 10px 22px; border-radius: 8px; border: 1px solid var(--border);
+      text-decoration: none; transition: all .15s;
+    }
+    .btn-secondary:hover { border-color: var(--border-hover); color: var(--text); text-decoration: none; }
+
+    /* ─── terminal demo ─── */
+    .terminal {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; margin-top: 48px; max-width: 600px; margin-left: auto; margin-right: auto;
+      text-align: left;
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+      background: rgba(255,255,255,.03); border-bottom: 1px solid var(--border);
+    }
+    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal-dot.r { background: #ff5f57; }
+    .terminal-dot.y { background: #febc2e; }
+    .terminal-dot.g { background: #28c840; }
+    .terminal-title { font-size: 11px; color: var(--text-muted); margin-left: auto; margin-right: auto; }
+    .terminal pre {
+      margin: 0; border: none; border-radius: 0; padding: 20px;
+      font-size: 13px; line-height: 1.65; color: var(--text-secondary); background: transparent;
+    }
+    .terminal pre .prompt { color: var(--green); }
+    .terminal pre .dim { color: var(--text-muted); }
+    .terminal pre .hl { color: var(--text); }
+
+    /* ─── how it works: horizontal pipeline ─── */
+    .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 32px; }
+    .pipeline-step {
+      background: var(--bg-elevated); padding: 24px 20px; position: relative;
+      border: 1px solid var(--border); transition: border-color .2s;
+    }
+    .pipeline-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+    .pipeline-step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+    .pipeline-step:hover { border-color: var(--border-hover); }
+    .pipeline-step iconify-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+    .pipeline-step h3 { margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+    .pipeline-step p { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin: 0; }
+
+    /* ─── three modes: tabbed cards ─── */
+    .mode-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+    .mode-card {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px; display: flex; flex-direction: column; transition: border-color .2s;
+    }
+    .mode-card:hover { border-color: var(--border-hover); }
+    .mode-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .mode-card-header iconify-icon { font-size: 22px; }
+    .mode-card-header h3 { font-size: 15px; margin: 0; }
+    .mode-card > p { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; line-height: 1.55; flex-grow: 1; }
+    .mode-card pre {
+      margin: 0; font-size: 12px; padding: 14px; line-height: 1.5;
+      background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .mode-card .tag {
+      display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .tag-ai { background: rgba(50,145,255,.1); color: var(--accent); }
+    .tag-fast { background: rgba(80,227,194,.1); color: var(--green); }
+    .tag-simple { background: rgba(245,166,35,.1); color: var(--yellow); }
+
+    /* comparison inline */
+    .compare-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;
+    }
+    .compare-card {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+    }
+    .compare-card h3 { font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .compare-card h3 iconify-icon { font-size: 18px; }
+    .compare-list { list-style: none; }
+    .compare-list li { font-size: 13px; color: var(--text-muted); padding: 3px 0; display: flex; align-items: baseline; gap: 8px; }
+    .compare-list li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; margin-top: 6px; }
+
+    /* ─── possibilities: bento grid ─── */
+    .bento { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+    .bento-card {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px; transition: border-color .2s;
+    }
+    .bento-card:hover { border-color: var(--border-hover); }
+    .bento-card.wide { grid-column: 1 / -1; }
+    .bento-card iconify-icon.bento-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+    .bento-card h3 { font-size: 16px; margin-bottom: 8px; }
+    .bento-card p { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.65; }
+    .bento-card pre {
+      margin: 16px 0 0; font-size: 12.5px; padding: 14px; line-height: 1.5;
+      background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 8px;
+    }
+
+    /* ─── use cases: compact grid ─── */
+    .usecase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+    .usecase-card {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; transition: border-color .2s;
+    }
+    .usecase-card:hover { border-color: var(--border-hover); }
+    .usecase-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .usecase-card-header iconify-icon { font-size: 20px; }
+    .usecase-card-header h3 { font-size: 14px; font-weight: 600; margin: 0; }
+    .usecase-card ul { list-style: none; }
+    .usecase-card li { font-size: 13px; color: var(--text-muted); padding: 3px 0; line-height: 1.5; }
+
+    /* ─── limitations: 3 columns ─── */
+    .limits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+    .limit-col {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px;
+    }
+    .limit-col h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .limit-col h3 iconify-icon { font-size: 18px; }
+    .limit-col ul { list-style: none; }
+    .limit-col li { font-size: 13px; color: var(--text-muted); padding: 4px 0; line-height: 1.5; }
+
+    /* ─── getting started: vertical stepper ─── */
+    .stepper { margin-top: 32px; position: relative; padding-left: 40px; }
+    .stepper::before {
+      content: ''; position: absolute; left: 15px; top: 12px; bottom: 12px;
+      width: 1px; background: var(--border);
+    }
+    .stepper-step { position: relative; margin-bottom: 36px; }
+    .stepper-step:last-child { margin-bottom: 0; }
+    .stepper-num {
+      position: absolute; left: -40px; top: 0;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--bg-card); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .stepper-step h3 { font-size: 15px; margin-bottom: 8px; }
+    .stepper-step p { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+    .stepper-step pre {
+      font-size: 12.5px; padding: 14px; line-height: 1.5; margin: 0;
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .stepper-step table { margin-top: 12px; }
+
+    /* ─── examples: collapsible ─── */
+    .examples-header { display: flex; align-items: center; justify-content: space-between; margin-top: 32px; }
+    .examples-header h3 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .examples-header h3 iconify-icon { font-size: 18px; }
+    details {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 8px; transition: border-color .2s;
+    }
+    details:hover { border-color: var(--border-hover); }
+    details[open] { border-color: var(--border-hover); }
+    summary {
+      padding: 14px 20px; cursor: pointer; font-size: 14px; font-weight: 500;
+      display: flex; align-items: center; gap: 10px; list-style: none;
+      color: var(--text); user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { display: none; }
+    summary iconify-icon.cat-icon { font-size: 18px; }
+    summary .chevron {
+      margin-left: auto; transition: transform .2s; color: var(--text-muted); font-size: 16px;
+    }
+    details[open] summary .chevron { transform: rotate(90deg); }
+    summary .count { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+    .details-body { padding: 0 20px 16px; }
+    .example-links { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
+    .example-links li { font-size: 13px; padding: 3px 0; }
+    .example-links a { color: var(--accent); }
+    .example-links .desc { color: var(--text-muted); }
+
+    /* ─── tables ─── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+    td { color: var(--text-secondary); }
+
+    /* ─── code ─── */
+    pre {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 13px; line-height: 1.6; color: var(--text-secondary);
+    }
+    code {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 13px; background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* ─── source: compact ─── */
+    .source-section {
+      background: var(--bg-elevated); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 48px 0;
+    }
+    .source-grid { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: start; }
+    .source-grid h2 { margin: 0; white-space: nowrap; }
+    .source-grid pre { margin: 0; font-size: 12.5px; }
+
+    /* ─── footer ─── */
+    footer { padding: 32px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+    footer a { color: var(--text-secondary); }
+
+    /* ─── mobile ─── */
+    @media (max-width: 768px) {
+      h1 { font-size: 32px; }
+      h2 { font-size: 24px; }
+      section { padding: 56px 0; }
+      .hero { padding: 64px 0 56px; }
+      .pipeline { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .pipeline-step:first-child { border-radius: var(--radius) 0 0 0; }
+      .pipeline-step:last-child { border-radius: 0 0 var(--radius) 0; }
+      .pipeline-step:nth-child(2) { border-radius: 0 var(--radius) 0 0; }
+      .pipeline-step:nth-child(3) { border-radius: 0 0 0 var(--radius); }
+      .mode-cards { grid-template-columns: 1fr; }
+      .bento { grid-template-columns: 1fr; }
+      .usecase-grid { grid-template-columns: 1fr; }
+      .limits-grid { grid-template-columns: 1fr; }
+      .compare-row { grid-template-columns: 1fr; }
+      .example-links { grid-template-columns: 1fr; }
+      .source-grid { grid-template-columns: 1fr; gap: 16px; }
+      .terminal { margin-top: 32px; }
+      .menu-toggle { display: block; }
+      nav .links {
+        display: none; position: absolute; top: 56px; left: 0; right: 0;
+        background: rgba(0,0,0,.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--border);
+        flex-direction: column; padding: 16px 24px; gap: 12px;
+      }
+      nav .links.open { display: flex; }
+      nav .links a { font-size: 14px; padding: 4px 0; }
+      nav .gh-btn { align-self: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── nav ─── -->
+<nav>
+  <div class="inner">
+    <a href="#" class="logo">droidclaw <span>experimental</span></a>
+    <button class="menu-toggle" onclick="document.querySelector('.links').classList.toggle('open')" aria-label="Menu">
+      <iconify-icon icon="ph:list-duotone" width="20" height="20"></iconify-icon>
+    </button>
+    <div class="links">
+      <a href="#how-it-works" onclick="this.parentElement.classList.remove('open')">how it works</a>
+      <a href="#possibilities" onclick="this.parentElement.classList.remove('open')">possibilities</a>
+      <a href="#getting-started" onclick="this.parentElement.classList.remove('open')">setup</a>
+      <a href="https://github.com/thisuxhq/droidclaw" class="gh-btn">
+        <iconify-icon icon="ph:github-logo-duotone" width="16" height="16"></iconify-icon> GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── hero ─── -->
+<section class="hero">
+  <div class="wrap">
+    <div class="badge"><iconify-icon icon="ph:flask-duotone" width="14" height="14" style="color:var(--amber)"></iconify-icon> experimental</div>
+    <h1>turn old phones into<br><span class="glow">ai agents</span></h1>
+    <p class="subtitle">
+      give it a goal in plain english. it reads the screen, thinks about what to do,
+      taps and types via adb, and repeats until the job is done.
+    </p>
+    <div class="hero-actions">
+      <a href="#getting-started" class="btn-primary">
+        <iconify-icon icon="ph:rocket-launch-duotone" width="16" height="16"></iconify-icon> get started
+      </a>
+      <a href="https://github.com/thisuxhq/droidclaw" class="btn-secondary">
+        <iconify-icon icon="ph:github-logo-duotone" width="16" height="16"></iconify-icon> view source
+      </a>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">droidclaw</span>
+      </div>
+<pre><span class="prompt">$</span> bun run src/kernel.ts
+<span class="dim">enter your goal:</span> <span class="hl">open youtube and search for "lofi hip hop"</span>
+
+<span class="dim">--- step 1/30 ---</span>
+<span class="hl">think:</span> i'm on the home screen. launching youtube.
+<span class="hl">action:</span> launch <span class="dim">(842ms)</span>
+
+<span class="dim">--- step 2/30 ---</span>
+<span class="hl">think:</span> youtube is open. tapping search icon.
+<span class="hl">action:</span> tap <span class="dim">(623ms)</span>
+
+<span class="dim">--- step 3/30 ---</span>
+<span class="hl">think:</span> search field focused.
+<span class="hl">action:</span> type "lofi hip hop" <span class="dim">(501ms)</span>
+
+<span class="dim">--- step 4/30 ---</span>
+<span class="hl">action:</span> enter <span class="dim">(389ms)</span>
+
+<span class="dim">--- step 5/30 ---</span>
+<span class="hl">think:</span> search results showing. done.
+<span class="hl">action:</span> done <span class="dim">(412ms)</span></pre>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── how it works ─── -->
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="section-label" style="color:var(--orange)"><iconify-icon icon="ph:gear-six-duotone"></iconify-icon> how it works</div>
+    <h2>perceive, reason, act, adapt</h2>
+    <p class="section-desc">every step is a loop. dump the accessibility tree, filter interactive elements, send to an llm, execute the action, repeat.</p>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <iconify-icon icon="ph:eye-duotone" style="color:var(--cyan)"></iconify-icon>
+        <h3>1. perceive</h3>
+        <p>captures the screen via <code>uiautomator dump</code> and parses the accessibility xml into tappable elements with coordinates and state.</p>
+      </div>
+      <div class="pipeline-step">
+        <iconify-icon icon="ph:brain-duotone" style="color:var(--purple)"></iconify-icon>
+        <h3>2. reason</h3>
+        <p>sends screen state + goal to an llm. the model returns think, plan, action - it explains its reasoning before acting.</p>
+      </div>
+      <div class="pipeline-step">
+        <iconify-icon icon="ph:cursor-click-duotone" style="color:var(--green)"></iconify-icon>
+        <h3>3. act</h3>
+        <p>executes the chosen action via adb - tap, type, swipe, launch, press back. 22 actions available.</p>
+      </div>
+      <div class="pipeline-step">
+        <iconify-icon icon="ph:arrows-clockwise-duotone" style="color:var(--orange)"></iconify-icon>
+        <h3>4. adapt</h3>
+        <p>if screen doesn't change for 3 steps, stuck recovery kicks in. empty accessibility tree falls back to screenshots.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── three modes ─── -->
+<section id="modes">
+  <div class="wrap">
+    <div class="section-label" style="color:var(--indigo)"><iconify-icon icon="ph:stack-duotone"></iconify-icon> three modes</div>
+    <h2>interactive, workflows, or flows</h2>
+    <p class="section-desc">type a goal, chain goals across apps with ai, or run deterministic steps with no llm calls.</p>
+
+    <div class="mode-cards">
+      <div class="mode-card">
+        <div class="mode-card-header">
+          <iconify-icon icon="ph:terminal-window-duotone" style="color:var(--green)"></iconify-icon>
+          <h3>interactive</h3>
+        </div>
+        <span class="tag tag-simple">just type</span>
+        <p>run it and describe what you want. the agent figures out the rest.</p>
+<pre>$ bun run src/kernel.ts
+enter your goal: send "running
+late, 10 mins" to Mom on whatsapp</pre>
+      </div>
+      <div class="mode-card">
+        <div class="mode-card-header">
+          <iconify-icon icon="ph:file-code-duotone" style="color:var(--accent)"></iconify-icon>
+          <h3>workflows</h3>
+        </div>
+        <span class="tag tag-ai">ai-powered &middot; json</span>
+        <p>chain goals across multiple apps. natural language steps, the llm navigates.</p>
+<pre>{
+  "name": "weather to whatsapp",
+  "steps": [
+    { "app": "com.google...",
+      "goal": "search chennai weather" },
+    { "goal": "share to Sanju" }
+  ]
+}</pre>
+      </div>
+      <div class="mode-card">
+        <div class="mode-card-header">
+          <iconify-icon icon="ph:play-duotone" style="color:var(--lime)"></iconify-icon>
+          <h3>flows</h3>
+        </div>
+        <span class="tag tag-fast">instant &middot; yaml</span>
+        <p>fixed taps and types. no llm, instant execution. for repeatable tasks.</p>
+<pre>appId: com.whatsapp
+name: Send WhatsApp Message
+---
+- launchApp
+- tap: "Contact Name"
+- type: "hello from droidclaw"
+- tap: "Send"</pre>
+      </div>
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-card">
+        <h3><iconify-icon icon="ph:file-code-duotone" style="color:var(--accent)"></iconify-icon> workflows</h3>
+        <ul class="compare-list">
+          <li>json format, uses ai</li>
+          <li>handles ui changes and popups</li>
+          <li>slower (llm calls each step)</li>
+          <li>best for complex multi-app tasks</li>
+        </ul>
+      </div>
+      <div class="compare-card">
+        <h3><iconify-icon icon="ph:play-duotone" style="color:var(--lime)"></iconify-icon> flows</h3>
+        <ul class="compare-list">
+          <li>yaml format, no ai needed</li>
+          <li>breaks if ui changes</li>
+          <li>instant execution</li>
+          <li>best for simple repeatable tasks</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── possibilities ─── -->
+<section id="possibilities">
+  <div class="wrap">
+    <div class="section-label" style="color:var(--amber)"><iconify-icon icon="ph:lightning-duotone"></iconify-icon> possibilities</div>
+    <h2>what you can build with this</h2>
+    <p class="section-desc">delegate to on-device ai apps, control phones remotely, turn old devices into always-on agents.</p>
+
+    <div class="bento">
+      <div class="bento-card wide">
+        <iconify-icon class="bento-icon" icon="ph:robot-duotone" style="color:var(--purple)"></iconify-icon>
+        <h3>delegate to ai apps on-device</h3>
+        <p>open google's ai mode, ask a question, grab the answer, forward it to whatsapp. or ask chatgpt something and share the response to slack. the agent uses apps on your phone as tools - no api keys for those services needed.</p>
+      </div>
+      <div class="bento-card">
+        <iconify-icon class="bento-icon" icon="ph:globe-duotone" style="color:var(--cyan)"></iconify-icon>
+        <h3>remote control with tailscale</h3>
+        <p>install tailscale on phone + laptop. connect adb over the tailnet. your phone is now a remote agent - control it from anywhere. run workflows from a cron job at 8am every morning.</p>
+<pre># from anywhere:
+adb connect &lt;phone-tailscale-ip&gt;:5555
+bun run src/kernel.ts --workflow morning.json</pre>
+      </div>
+      <div class="bento-card">
+        <iconify-icon class="bento-icon" icon="ph:device-mobile-duotone" style="color:var(--coral)"></iconify-icon>
+        <h3>old phones, always on</h3>
+        <p>that android in a drawer can now send standups to slack, check flight prices, digest telegram channels, forward weather to whatsapp. it runs apps that don't have apis.</p>
+      </div>
+      <div class="bento-card wide">
+        <iconify-icon class="bento-icon" icon="ph:sparkle-duotone" style="color:var(--amber)"></iconify-icon>
+        <h3>automation with ai intelligence</h3>
+        <p>unlike predefined button flows, the agent actually thinks. if a button moves, a popup appears, or the layout changes - it adapts. it reads the screen, understands context, and makes decisions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── use cases ─── -->
+<section id="use-cases">
+  <div class="wrap">
+    <div class="section-label" style="color:var(--green)"><iconify-icon icon="ph:list-checks-duotone"></iconify-icon> use cases</div>
+    <h2>things it can do right now</h2>
+    <p class="section-desc">across any app installed on the device.</p>
+
+    <div class="usecase-grid">
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:chat-circle-dots-duotone" style="color:var(--green)"></iconify-icon>
+          <h3>messaging</h3>
+        </div>
+        <ul>
+          <li>send <strong style="color:var(--text)">whatsapp</strong> to saved or unsaved numbers</li>
+          <li>reply to latest <strong style="color:var(--text)">sms</strong></li>
+          <li>compose emails via <strong style="color:var(--text)">gmail</strong></li>
+          <li><strong style="color:var(--text)">telegram</strong> messages to groups</li>
+          <li>post standups to <strong style="color:var(--text)">slack</strong></li>
+          <li>broadcast to <strong style="color:var(--text)">multiple contacts</strong></li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:magnifying-glass-duotone" style="color:var(--cyan)"></iconify-icon>
+          <h3>research</h3>
+        </div>
+        <ul>
+          <li>search <strong style="color:var(--text)">google</strong>, collect results</li>
+          <li>ask <strong style="color:var(--text)">chatgpt / gemini</strong>, grab answer</li>
+          <li>check <strong style="color:var(--text)">weather, stocks, flights</strong></li>
+          <li>compare <strong style="color:var(--text)">prices</strong> across apps</li>
+          <li>translate via <strong style="color:var(--text)">google translate</strong></li>
+          <li>compile <strong style="color:var(--text)">multi-source digests</strong></li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:share-network-duotone" style="color:var(--purple)"></iconify-icon>
+          <h3>social</h3>
+        </div>
+        <ul>
+          <li>post to <strong style="color:var(--text)">instagram, twitter/x</strong></li>
+          <li><strong style="color:var(--text)">like and comment</strong> on posts</li>
+          <li>check <strong style="color:var(--text)">engagement metrics</strong></li>
+          <li>save <strong style="color:var(--text)">youtube</strong> to watch later</li>
+          <li>follow / unfollow accounts</li>
+          <li>check <strong style="color:var(--text)">linkedin</strong> notifications</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:briefcase-duotone" style="color:var(--indigo)"></iconify-icon>
+          <h3>productivity</h3>
+        </div>
+        <ul>
+          <li><strong style="color:var(--text)">morning briefing</strong> across apps</li>
+          <li>create <strong style="color:var(--text)">calendar events</strong></li>
+          <li>capture notes in <strong style="color:var(--text)">google keep</strong></li>
+          <li>check <strong style="color:var(--text)">github</strong> pull requests</li>
+          <li>set <strong style="color:var(--text)">alarms and reminders</strong></li>
+          <li>triage <strong style="color:var(--text)">notifications</strong></li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:heart-duotone" style="color:var(--pink)"></iconify-icon>
+          <h3>lifestyle</h3>
+        </div>
+        <ul>
+          <li>order food from <strong style="color:var(--text)">delivery apps</strong></li>
+          <li>book an <strong style="color:var(--text)">uber</strong> ride</li>
+          <li>play songs on <strong style="color:var(--text)">spotify</strong></li>
+          <li>check commute on <strong style="color:var(--text)">maps</strong></li>
+          <li>log <strong style="color:var(--text)">workouts</strong>, track expenses</li>
+          <li>toggle <strong style="color:var(--text)">do not disturb</strong></li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-card-header">
+          <iconify-icon icon="ph:gear-duotone" style="color:var(--orange)"></iconify-icon>
+          <h3>device control</h3>
+        </div>
+        <ul>
+          <li>toggle <strong style="color:var(--text)">wifi, bluetooth, airplane</strong></li>
+          <li>adjust <strong style="color:var(--text)">brightness, volume</strong></li>
+          <li><strong style="color:var(--text)">force stop</strong> or clear cache</li>
+          <li>grant/revoke <strong style="color:var(--text)">permissions</strong></li>
+          <li><strong style="color:var(--text)">install/uninstall</strong> apps</li>
+          <li>run any <strong style="color:var(--text)">adb shell</strong> command</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── capabilities & limitations ─── -->
+<section id="limitations">
+  <div class="wrap">
+    <div class="section-label" style="color:var(--accent)"><iconify-icon icon="ph:info-duotone"></iconify-icon> honest take</div>
+    <h2>what works and what doesn't</h2>
+    <p class="section-desc">22 actions + 6 multi-step skills. here's the reality.</p>
+
+    <div class="limits-grid">
+      <div class="limit-col">
+        <h3><iconify-icon icon="ph:check-circle-duotone" style="color:var(--green)"></iconify-icon> works well</h3>
+        <ul>
+          <li><strong style="color:var(--text)">native android apps</strong> with standard ui</li>
+          <li><strong style="color:var(--text)">multi-app workflows</strong> that chain goals</li>
+          <li>device settings via <strong style="color:var(--text)">shell commands</strong></li>
+          <li><strong style="color:var(--text)">text input</strong>, navigation, taps</li>
+          <li><strong style="color:var(--text)">stuck detection</strong> + recovery</li>
+          <li><strong style="color:var(--text)">vision fallback</strong> for empty trees</li>
+        </ul>
+      </div>
+      <div class="limit-col">
+        <h3><iconify-icon icon="ph:warning-duotone" style="color:var(--yellow)"></iconify-icon> unreliable</h3>
+        <ul>
+          <li><strong style="color:var(--text)">flutter, react native</strong>, games</li>
+          <li><strong style="color:var(--text)">webviews</strong> (incomplete tree)</li>
+          <li><strong style="color:var(--text)">drag & drop</strong>, multi-finger</li>
+          <li><strong style="color:var(--text)">notification</strong> interaction</li>
+          <li><strong style="color:var(--text)">clipboard</strong> on android 12+</li>
+          <li><strong style="color:var(--text)">captchas</strong> and bot detection</li>
+        </ul>
+      </div>
+      <div class="limit-col">
+        <h3><iconify-icon icon="ph:x-circle-duotone" style="color:var(--red)"></iconify-icon> can't do</h3>
+        <ul>
+          <li><strong style="color:var(--text)">banking apps</strong> (FLAG_SECURE)</li>
+          <li><strong style="color:var(--text)">biometrics</strong> (fingerprint, face)</li>
+          <li>bypass <strong style="color:var(--text)">encrypted lock screen</strong></li>
+          <li>access other apps' <strong style="color:var(--text)">private data</strong></li>
+          <li><strong style="color:var(--text)">audio or camera</strong> streams</li>
+          <li><strong style="color:var(--text)">pinch-to-zoom</strong> gestures</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── getting started ─── -->
+<section id="getting-started">
+  <div class="wrap-narrow">
+    <div class="section-label" style="color:var(--coral)"><iconify-icon icon="ph:rocket-launch-duotone"></iconify-icon> setup</div>
+    <h2>getting started</h2>
+
+    <div class="stepper">
+      <div class="stepper-step">
+        <span class="stepper-num">1</span>
+        <h3>clone and install</h3>
+<pre>git clone https://github.com/thisuxhq/droidclaw.git
+cd droidclaw && bun install
+cp .env.example .env</pre>
+      </div>
+      <div class="stepper-step">
+        <span class="stepper-num">2</span>
+        <h3>configure an llm provider</h3>
+        <p>edit <code>.env</code> - fastest way to start is groq (free tier):</p>
+<pre>LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_your_key_here</pre>
+        <table>
+          <thead><tr><th>provider</th><th>cost</th><th>vision</th><th>notes</th></tr></thead>
+          <tbody>
+            <tr><td>groq</td><td>free</td><td>no</td><td>fastest to start</td></tr>
+            <tr><td>openrouter</td><td>per token</td><td>yes</td><td>200+ models</td></tr>
+            <tr><td>openai</td><td>per token</td><td>yes</td><td>gpt-4o</td></tr>
+            <tr><td>bedrock</td><td>per token</td><td>yes</td><td>claude on aws</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="stepper-step">
+        <span class="stepper-num">3</span>
+        <h3>connect your phone</h3>
+        <p>enable usb debugging in developer options, plug in via usb.</p>
+<pre>adb devices   # should show your device
+bun run src/kernel.ts</pre>
+      </div>
+      <div class="stepper-step">
+        <span class="stepper-num">4</span>
+        <h3>tune (optional)</h3>
+        <table>
+          <thead><tr><th>key</th><th>default</th><th>what</th></tr></thead>
+          <tbody>
+            <tr><td>MAX_STEPS</td><td>30</td><td>steps before giving up</td></tr>
+            <tr><td>STEP_DELAY</td><td>2</td><td>seconds between actions</td></tr>
+            <tr><td>STUCK_THRESHOLD</td><td>3</td><td>steps before stuck recovery</td></tr>
+            <tr><td>VISION_MODE</td><td>fallback</td><td>off / fallback / always</td></tr>
+            <tr><td>MAX_ELEMENTS</td><td>40</td><td>ui elements sent to llm</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── examples ─── -->
+<section id="examples">
+  <div class="wrap-narrow">
+    <div class="section-label"><iconify-icon icon="ph:folder-open-duotone"></iconify-icon> examples</div>
+    <h2>35 workflows + 5 flows</h2>
+    <p class="section-desc" style="margin-bottom: 24px;">ready to use. workflows are ai-powered (json), flows are deterministic (yaml).</p>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:chat-circle-dots-duotone"></iconify-icon>
+        messaging <span class="count">10 workflows</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/slack-standup.json">slack-standup</a> <span class="desc">- post daily standup</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/whatsapp-broadcast.json">whatsapp-broadcast</a> <span class="desc">- message multiple contacts</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/telegram-send-message.json">telegram-send-message</a> <span class="desc">- send telegram message</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/email-reply.json">email-reply</a> <span class="desc">- draft and send email</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/whatsapp-to-email.json">whatsapp-to-email</a> <span class="desc">- forward to email</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/slack-check-messages.json">slack-check-messages</a> <span class="desc">- read unread messages</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/email-digest.json">email-digest</a> <span class="desc">- summarise emails</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/telegram-channel-digest.json">telegram-channel-digest</a> <span class="desc">- digest a channel</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/whatsapp-reply.json">whatsapp-reply</a> <span class="desc">- reply to a message</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/messaging/send-whatsapp-vi.json">send-whatsapp-vi</a> <span class="desc">- send to specific contact</span></li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:share-network-duotone"></iconify-icon>
+        social <span class="count">4 workflows</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/social/social-media-post.json">social-media-post</a> <span class="desc">- post across platforms</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/social/social-media-engage.json">social-media-engage</a> <span class="desc">- like/comment on posts</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/social/instagram-post-check.json">instagram-post-check</a> <span class="desc">- check recent posts</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/social/youtube-watch-later.json">youtube-watch-later</a> <span class="desc">- save videos</span></li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:briefcase-duotone"></iconify-icon>
+        productivity <span class="count">8 workflows</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/morning-briefing.json">morning-briefing</a> <span class="desc">- messages, calendar, weather</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/github-check-prs.json">github-check-prs</a> <span class="desc">- check pull requests</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/calendar-create-event.json">calendar-create-event</a> <span class="desc">- create event</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/notes-capture.json">notes-capture</a> <span class="desc">- capture a note</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/notification-cleanup.json">notification-cleanup</a> <span class="desc">- triage notifications</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/screenshot-share-slack.json">screenshot-share-slack</a> <span class="desc">- screenshot to slack</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/translate-and-reply.json">translate-and-reply</a> <span class="desc">- translate and reply</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/productivity/logistics-workflow.json">logistics-workflow</a> <span class="desc">- multi-app coordination</span></li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:magnifying-glass-duotone"></iconify-icon>
+        research <span class="count">6 workflows</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/weather-to-whatsapp.json">weather-to-whatsapp</a> <span class="desc">- weather via ai mode to whatsapp</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/multi-app-research.json">multi-app-research</a> <span class="desc">- research across apps</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/price-comparison.json">price-comparison</a> <span class="desc">- compare prices</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/news-roundup.json">news-roundup</a> <span class="desc">- collect news</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/google-search-report.json">google-search-report</a> <span class="desc">- search and save</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/research/check-flight-status.json">check-flight-status</a> <span class="desc">- flight status</span></li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:heart-duotone"></iconify-icon>
+        lifestyle <span class="count">8 workflows</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/food-order.json">food-order</a> <span class="desc">- order food</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/uber-ride.json">uber-ride</a> <span class="desc">- book a ride</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/spotify-playlist.json">spotify-playlist</a> <span class="desc">- create/add playlist</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/maps-commute.json">maps-commute</a> <span class="desc">- check commute</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/fitness-log.json">fitness-log</a> <span class="desc">- log workout</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/expense-tracker.json">expense-tracker</a> <span class="desc">- log expense</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/wifi-password-share.json">wifi-password-share</a> <span class="desc">- share wifi</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/workflows/lifestyle/do-not-disturb.json">do-not-disturb</a> <span class="desc">- toggle dnd</span></li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>
+        <iconify-icon class="cat-icon" icon="ph:play-duotone"></iconify-icon>
+        flows <span class="count">5 deterministic</span>
+        <iconify-icon class="chevron" icon="ph:caret-right-bold" width="14" height="14"></iconify-icon>
+      </summary>
+      <div class="details-body">
+        <ul class="example-links">
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/flows/send-whatsapp.yaml">send-whatsapp</a> <span class="desc">- send a message</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/flows/google-search.yaml">google-search</a> <span class="desc">- run a search</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/flows/create-contact.yaml">create-contact</a> <span class="desc">- add a contact</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/flows/clear-notifications.yaml">clear-notifications</a> <span class="desc">- clear all</span></li>
+          <li><a href="https://github.com/thisuxhq/droidclaw/blob/main/examples/flows/toggle-wifi.yaml">toggle-wifi</a> <span class="desc">- toggle wifi</span></li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ─── source ─── -->
+<div class="source-section">
+  <div class="wrap">
+    <div class="source-grid">
+      <div>
+        <div class="section-label"><iconify-icon icon="ph:code-duotone"></iconify-icon> source</div>
+        <h2>10 files in src/</h2>
+      </div>
+<pre>kernel.ts          main loop
+actions.ts         22 actions + adb retry
+skills.ts          6 multi-step skills
+workflow.ts        workflow orchestration
+flow.ts            yaml flow runner
+llm-providers.ts   4 providers + system prompt
+sanitizer.ts       accessibility xml parser
+config.ts          env config
+constants.ts       keycodes, coordinates
+logger.ts          session logging</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ─── footer ─── -->
+<footer>
+  <div class="wrap">
+    <p>
+      <a href="https://github.com/thisuxhq/droidclaw"><iconify-icon icon="ph:github-logo-duotone" width="14" height="14" style="vertical-align:-2px"></iconify-icon> github</a>
+      &nbsp;&middot;&nbsp; mit license &nbsp;&middot;&nbsp; built by <a href="https://thisux.com">thisux</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
