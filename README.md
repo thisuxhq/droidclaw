@@ -35,6 +35,9 @@ action: done (412ms)
 you need **bun**, **adb**, and an api key for any llm provider.
 
 ```bash
+# install adb if you don't have it
+brew install android-platform-tools
+
 bun install
 cp .env.example .env
 ```
