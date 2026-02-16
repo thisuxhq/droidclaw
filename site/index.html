@@ -14,7 +14,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="droidclaw - ai agent for android">
   <meta property="og:description" content="turn old android phones into ai agents. give it a goal in plain english - it figures out what to tap, type, and swipe.">
-  <meta property="og:url" content="https://github.com/unitedbyai/droidclaw">
+  <meta property="og:url" content="https://droidclaw.ai">
   <meta property="og:site_name" content="droidclaw">
 
   <!-- twitter card -->
@@ -22,7 +22,7 @@
   <meta name="twitter:title" content="droidclaw - ai agent for android">
   <meta name="twitter:description" content="turn old android phones into ai agents. give it a goal in plain english - it figures out what to tap, type, and swipe.">
 
-  <link rel="canonical" href="https://github.com/unitedbyai/droidclaw">
+  <link rel="canonical" href="https://droidclaw.ai">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
@@ -758,19 +758,12 @@ bun run src/kernel.ts --workflow morning.json</pre>
     <div class="stepper">
       <div class="stepper-step">
         <span class="stepper-num">1</span>
-        <h3>install adb</h3>
-        <p>adb (android debug bridge) is how droidclaw talks to your phone - every tap, type, and swipe goes through it.</p>
-<pre>brew install android-platform-tools</pre>
+        <h3>install</h3>
+        <p>one command. installs bun and adb if missing, clones the repo, sets up .env.</p>
+<pre>curl -fsSL https://droidclaw.ai/install.sh | sh</pre>
       </div>
       <div class="stepper-step">
         <span class="stepper-num">2</span>
-        <h3>clone and install</h3>
-<pre>git clone https://github.com/unitedbyai/droidclaw.git
-cd droidclaw && bun install
-cp .env.example .env</pre>
-      </div>
-      <div class="stepper-step">
-        <span class="stepper-num">3</span>
         <h3>configure an llm provider</h3>
         <p>edit <code>.env</code> - fastest way is ollama (fully local, no api key):</p>
 <pre># local (no api key needed)
@@ -792,14 +785,14 @@ GROQ_API_KEY=gsk_your_key_here</pre>
         </table>
       </div>
       <div class="stepper-step">
-        <span class="stepper-num">4</span>
+        <span class="stepper-num">3</span>
         <h3>connect your phone</h3>
         <p>enable usb debugging in developer options, plug in via usb.</p>
 <pre>adb devices   # should show your device
-bun run src/kernel.ts</pre>
+cd droidclaw && bun run src/kernel.ts</pre>
       </div>
       <div class="stepper-step">
-        <span class="stepper-num">5</span>
+        <span class="stepper-num">4</span>
         <h3>tune (optional)</h3>
         <table>
           <thead><tr><th>key</th><th>default</th><th>what</th></tr></thead>

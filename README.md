@@ -32,13 +32,16 @@ action: done (412ms)
 
 ## setup
 
-you need **bun**, **adb**, and either [ollama](https://ollama.com) for local models or an api key for a cloud provider.
+```bash
+curl -fsSL https://droidclaw.ai/install.sh | sh
+```
+
+installs bun and adb if missing, clones the repo, sets up `.env`. or do it manually:
 
 ```bash
-# install adb if you don't have it
-brew install android-platform-tools
-
-bun install
+brew install android-platform-tools   # adb
+git clone https://github.com/unitedbyai/droidclaw.git
+cd droidclaw && bun install
 cp .env.example .env
 ```
 
