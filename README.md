@@ -39,11 +39,19 @@ curl -fsSL https://droidclaw.ai/install.sh | sh
 installs bun and adb if missing, clones the repo, sets up `.env`. or do it manually:
 
 ```bash
-brew install android-platform-tools   # adb
+# install adb
+brew install android-platform-tools
+
+# install bun (required — npm/node won't work)
+curl -fsSL https://bun.sh/install | bash
+
+# clone and setup
 git clone https://github.com/unitedbyai/droidclaw.git
 cd droidclaw && bun install
 cp .env.example .env
 ```
+
+> **note:** droidclaw requires [bun](https://bun.sh), not node/npm. it uses bun-specific apis (`Bun.spawnSync`, native `.env` loading) that don't exist in node.
 
 edit `.env` - fastest way to start is with ollama (fully local, no api key):
 

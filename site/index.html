@@ -761,6 +761,17 @@ bun run src/kernel.ts --workflow morning.json</pre>
         <h3>install</h3>
         <p>one command. installs bun and adb if missing, clones the repo, sets up .env.</p>
 <pre>curl -fsSL https://droidclaw.ai/install.sh | sh</pre>
+        <p style="margin-top: 16px;">or do it manually:</p>
+<pre><span class="dim"># install adb</span>
+brew install android-platform-tools
+
+<span class="dim"># install bun (required — npm/node won't work)</span>
+curl -fsSL https://bun.sh/install | bash
+
+<span class="dim"># clone and setup</span>
+git clone https://github.com/unitedbyai/droidclaw.git
+cd droidclaw && bun install
+cp .env.example .env</pre>
       </div>
       <div class="stepper-step">
         <span class="stepper-num">2</span>
