@@ -53,17 +53,19 @@ cp .env.example .env
 
 > **note:** droidclaw requires [bun](https://bun.sh), not node/npm. it uses bun-specific apis (`Bun.spawnSync`, native `.env` loading) that don't exist in node.
 
-edit `.env` - fastest way to start is with ollama (fully local, no api key):
+edit `.env` - fastest way to start is with groq (free tier):
 
 ```bash
-# option a: local with ollama (no api key needed)
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_your_key_here
+```
+
+or run fully local with [ollama](https://ollama.com) (no api key needed):
+
+```bash
 ollama pull llama3.2
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=llama3.2
-
-# option b: cloud with groq (free tier)
-LLM_PROVIDER=groq
-GROQ_API_KEY=gsk_your_key_here
 ```
 
 connect your phone (usb debugging on):
@@ -206,8 +208,8 @@ name: Send WhatsApp Message
 
 | provider | cost | vision | notes |
 |---|---|---|---|
+| groq | free tier | no | fastest to start |
 | ollama | free (local) | yes* | no api key, runs on your machine |
-| groq | free tier | no | fastest cloud option |
 | openrouter | per token | yes | 200+ models |
 | openai | per token | yes | gpt-4o |
 | bedrock | per token | yes | claude on aws |

@@ -793,19 +793,18 @@ cp .env.example .env</pre>
       <div class="stepper-step">
         <span class="stepper-num">2</span>
         <h3>configure an llm provider</h3>
-        <p>edit <code>.env</code> - fastest way is ollama (fully local, no api key):</p>
-<pre># local (no api key needed)
-ollama pull llama3.2
-LLM_PROVIDER=ollama
+        <p>edit <code>.env</code> - fastest way to start is groq (free tier):</p>
+<pre>LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_your_key_here
 
-# or cloud (free tier)
-LLM_PROVIDER=groq
-GROQ_API_KEY=gsk_your_key_here</pre>
+# or run fully local with ollama (no api key)
+# ollama pull llama3.2
+# LLM_PROVIDER=ollama</pre>
         <table>
           <thead><tr><th>provider</th><th>cost</th><th>vision</th><th>notes</th></tr></thead>
           <tbody>
+            <tr><td>groq</td><td>free</td><td>no</td><td>fastest to start</td></tr>
             <tr><td>ollama</td><td>free (local)</td><td>yes*</td><td>no api key, runs on your machine</td></tr>
-            <tr><td>groq</td><td>free</td><td>no</td><td>fastest cloud option</td></tr>
             <tr><td>openrouter</td><td>per token</td><td>yes</td><td>200+ models</td></tr>
             <tr><td>openai</td><td>per token</td><td>yes</td><td>gpt-4o</td></tr>
             <tr><td>bedrock</td><td>per token</td><td>yes</td><td>claude on aws</td></tr>
