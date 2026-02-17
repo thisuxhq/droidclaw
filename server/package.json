@@ -1,0 +1,21 @@
+{
+  "name": "@droidclaw/server",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@droidclaw/shared": "workspace:*",
+    "hono": "^4.7.0",
+    "better-auth": "^1.3.27",
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.9.2"
+  }
+}

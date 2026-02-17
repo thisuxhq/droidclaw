@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["bun"],
+    "paths": {
+      "@droidclaw/shared": ["../packages/shared/src"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

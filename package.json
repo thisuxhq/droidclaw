@@ -1,5 +1,6 @@
 {
   "name": "droidclaw",
+  "workspaces": ["packages/*", "server"],
   "version": "1.0.0",
   "description": "AI agent that takes control of your Android phone — give it a goal, it figures out the taps",
   "type": "module",
@@ -13,12 +14,14 @@
     "@openrouter/ai-sdk-provider": "^2.1.1",
     "ai": "^6.0.72",
     "fast-xml-parser": "^4.5.0",
+    "js-yaml": "^4.1.1",
     "openai": "^4.73.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.6.0"
   }
 }
