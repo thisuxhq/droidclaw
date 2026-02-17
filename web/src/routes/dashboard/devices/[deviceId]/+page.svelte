@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	const deviceId = page.params.deviceId;
+	const deviceId = page.params.deviceId!;
 
 	let goal = $state('');
 	let steps = $state<Array<{ step: number; action: string; reasoning: string }>>([]);
