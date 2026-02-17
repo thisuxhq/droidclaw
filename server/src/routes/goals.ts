@@ -1,13 +1,25 @@
 import { Hono } from "hono";
 import { sessionMiddleware, type AuthEnv } from "../middleware/auth.js";
 import { sessions } from "../ws/sessions.js";
+import { runAgentLoop, type AgentLoopOptions } from "../agent/loop.js";
+import type { LLMConfig } from "../agent/llm.js";
 
 const goals = new Hono<AuthEnv>();
 goals.use("*", sessionMiddleware);
 
+/** Track running agent sessions so we can prevent duplicates */
+const activeSessions = new Map<string, { sessionId: string; goal: string }>();
+
 goals.post("/", async (c) => {
   const user = c.get("user");
-  const body = await c.req.json<{ deviceId: string; goal: string }>();
+  const body = await c.req.json<{
+    deviceId: string;
+    goal: string;
+    llmProvider?: string;
+    llmApiKey?: string;
+    llmModel?: string;
+    maxSteps?: number;
+  }>();
 
   if (!body.deviceId || !body.goal) {
     return c.json({ error: "deviceId and goal are required" }, 400);
@@ -22,14 +34,62 @@ goals.post("/", async (c) => {
     return c.json({ error: "device does not belong to you" }, 403);
   }
 
-  // TODO (Task 6): start agent loop for this device+goal
-  const sessionId = crypto.randomUUID();
+  // Prevent multiple agent loops on the same device
+  if (activeSessions.has(body.deviceId)) {
+    const existing = activeSessions.get(body.deviceId)!;
+    return c.json(
+      { error: "agent already running on this device", sessionId: existing.sessionId, goal: existing.goal },
+      409
+    );
+  }
 
+  // Build LLM config from request body or environment defaults
+  const llmConfig: LLMConfig = {
+    provider: body.llmProvider ?? process.env.LLM_PROVIDER ?? "openai",
+    apiKey: body.llmApiKey ?? process.env.LLM_API_KEY ?? "",
+    model: body.llmModel,
+  };
+
+  if (!llmConfig.apiKey) {
+    return c.json({ error: "LLM API key is required (provide llmApiKey or set LLM_API_KEY env var)" }, 400);
+  }
+
+  const options: AgentLoopOptions = {
+    deviceId: body.deviceId,
+    userId: user.id,
+    goal: body.goal,
+    llmConfig,
+    maxSteps: body.maxSteps,
+  };
+
+  // Start the agent loop in the background (fire-and-forget).
+  // The client observes progress via the /ws/dashboard WebSocket.
+  const loopPromise = runAgentLoop(options);
+
+  // Track as active until it completes
+  const trackingId = body.deviceId;
+  const sessionPlaceholder = { sessionId: "pending", goal: body.goal };
+  activeSessions.set(trackingId, sessionPlaceholder);
+
+  loopPromise
+    .then((result) => {
+      activeSessions.delete(trackingId);
+      console.log(
+        `[Agent] Completed on ${body.deviceId}: ${result.success ? "success" : "incomplete"} in ${result.stepsUsed} steps (session ${result.sessionId})`
+      );
+    })
+    .catch((err) => {
+      activeSessions.delete(trackingId);
+      console.error(`[Agent] Error on ${body.deviceId}: ${err}`);
+    });
+
+  // We need the sessionId from the loop, but it's created inside runAgentLoop.
+  // For immediate response, generate one here and let the dashboard events carry the real one.
+  // The loop will emit goal_started with its sessionId momentarily.
   return c.json({
-    sessionId,
     deviceId: body.deviceId,
     goal: body.goal,
-    status: "queued",
+    status: "started",
   });
 });
 
