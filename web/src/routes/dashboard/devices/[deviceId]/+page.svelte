@@ -41,9 +41,9 @@
 		id: string;
 		goal: string;
 		status: string;
-		stepsUsed: number;
-		startedAt: string;
-		completedAt: string | null;
+		stepsUsed: number | null;
+		startedAt: Date;
+		completedAt: Date | null;
 	}
 	interface Step {
 		id: string;
@@ -144,8 +144,8 @@
 		return unsub;
 	});
 
-	function formatTime(iso: string) {
-		return new Date(iso).toLocaleString();
+	function formatTime(d: string | Date) {
+		return (d instanceof Date ? d : new Date(d)).toLocaleString();
 	}
 
 	function relativeTime(iso: string) {

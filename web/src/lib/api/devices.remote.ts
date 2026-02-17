@@ -1,3 +1,4 @@
+import * as v from 'valibot';
 import { query, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { device, agentSession, agentStep } from '$lib/server/db/schema';
@@ -59,7 +60,7 @@ export const listDevices = query(async () => {
 	});
 });
 
-export const getDevice = query(async (deviceId: string) => {
+export const getDevice = query(v.string(), async (deviceId) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return null;
 
@@ -88,7 +89,7 @@ export const getDevice = query(async (deviceId: string) => {
 	};
 });
 
-export const getDeviceStats = query(async (deviceId: string) => {
+export const getDeviceStats = query(v.string(), async (deviceId) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return null;
 
@@ -116,7 +117,7 @@ export const getDeviceStats = query(async (deviceId: string) => {
 	}
 });
 
-export const listDeviceSessions = query(async (deviceId: string) => {
+export const listDeviceSessions = query(v.string(), async (deviceId) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return [];
 
@@ -130,24 +131,27 @@ export const listDeviceSessions = query(async (deviceId: string) => {
 	return sessions;
 });
 
-export const listSessionSteps = query(async ({ deviceId, sessionId }: { deviceId: string; sessionId: string }) => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) return [];
+export const listSessionSteps = query(
+	v.object({ deviceId: v.string(), sessionId: v.string() }),
+	async ({ deviceId, sessionId }) => {
+		const { locals } = getRequestEvent();
+		if (!locals.user) return [];
 
-	// Verify session belongs to user
-	const sess = await db
-		.select()
-		.from(agentSession)
-		.where(and(eq(agentSession.id, sessionId), eq(agentSession.userId, locals.user.id)))
-		.limit(1);
+		// Verify session belongs to user
+		const sess = await db
+			.select()
+			.from(agentSession)
+			.where(and(eq(agentSession.id, sessionId), eq(agentSession.userId, locals.user.id)))
+			.limit(1);
 
-	if (sess.length === 0) return [];
+		if (sess.length === 0) return [];
 
-	const steps = await db
-		.select()
-		.from(agentStep)
-		.where(eq(agentStep.sessionId, sessionId))
-		.orderBy(agentStep.stepNumber);
+		const steps = await db
+			.select()
+			.from(agentStep)
+			.where(eq(agentStep.sessionId, sessionId))
+			.orderBy(agentStep.stepNumber);
 
-	return steps;
-});
+		return steps;
+	}
+);
