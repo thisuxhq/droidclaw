@@ -43,6 +43,39 @@ export interface ActionDecision {
   dest?: string;
   code?: number;
   setting?: string;
+  /** Android intent action (e.g. "android.intent.action.VIEW") */
+  intentAction?: string;
+  /** MIME type for intent (e.g. "text/plain") */
+  intentType?: string;
+}
+
+// ─── Pipeline Types ──────────────────────────────────────────
+
+/** Result from Stage 1 (deterministic parser) or Stage 2 (LLM classifier) */
+export type PipelineResult =
+  | { stage: "parser" | "classifier"; type: "intent"; intent: IntentCommand }
+  | { stage: "parser" | "classifier"; type: "launch"; packageName: string }
+  | { stage: "parser"; type: "open_url"; url: string }
+  | { stage: "parser"; type: "open_settings"; setting: string }
+  | { stage: "classifier"; type: "ui"; app: string; subGoal: string }
+  | { stage: "parser" | "classifier"; type: "done"; reason: string }
+  | { stage: "parser" | "classifier"; type: "passthrough" };
+
+export interface IntentCommand {
+  intentAction: string;
+  uri?: string;
+  intentType?: string;
+  extras?: Record<string, string>;
+  packageName?: string;
+}
+
+/** Device capabilities extracted from installed apps + intents */
+export interface DeviceCapabilities {
+  apps: InstalledApp[];
+  /** Map of URI scheme → list of package names that handle it */
+  schemeHandlers: Record<string, string[]>;
+  /** Set of special intent actions supported (e.g. "android.intent.action.SET_ALARM") */
+  supportedActions: Set<string>;
 }
 
 export interface ActionResult {
@@ -64,6 +97,8 @@ export interface DeviceInfo {
 export interface InstalledApp {
   packageName: string;
   label: string;
+  /** Supported intents, e.g. ["VIEW:whatsapp", "SEND:text/plain", "android.intent.action.SET_ALARM"] */
+  intents?: string[];
 }
 
 export interface ScreenState {
