@@ -5,7 +5,8 @@ export type DeviceMessage =
   | { type: "screen"; requestId: string; elements: UIElement[]; screenshot?: string; packageName?: string }
   | { type: "result"; requestId: string; success: boolean; error?: string; data?: string }
   | { type: "goal"; text: string }
-  | { type: "pong" };
+  | { type: "pong" }
+  | { type: "heartbeat"; batteryLevel: number; isCharging: boolean };
 
 export type ServerToDeviceMessage =
   | { type: "auth_ok"; deviceId: string }
@@ -38,4 +39,5 @@ export type DashboardMessage =
   | { type: "device_offline"; deviceId: string }
   | { type: "step"; sessionId: string; step: number; action: Record<string, unknown>; reasoning: string; screenHash: string }
   | { type: "goal_started"; sessionId: string; goal: string; deviceId: string }
-  | { type: "goal_completed"; sessionId: string; success: boolean; stepsUsed: number };
+  | { type: "goal_completed"; sessionId: string; success: boolean; stepsUsed: number }
+  | { type: "device_status"; deviceId: string; batteryLevel: number; isCharging: boolean };

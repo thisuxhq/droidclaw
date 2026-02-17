@@ -53,9 +53,12 @@ export interface ActionResult {
 
 export interface DeviceInfo {
   model: string;
+  manufacturer: string;
   androidVersion: string;
   screenWidth: number;
   screenHeight: number;
+  batteryLevel: number;
+  isCharging: boolean;
 }
 
 export interface ScreenState {

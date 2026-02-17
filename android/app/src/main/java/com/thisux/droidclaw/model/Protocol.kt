@@ -13,9 +13,12 @@ data class AuthMessage(
 @Serializable
 data class DeviceInfoMsg(
     val model: String,
+    val manufacturer: String,
     val androidVersion: String,
     val screenWidth: Int,
-    val screenHeight: Int
+    val screenHeight: Int,
+    val batteryLevel: Int,
+    val isCharging: Boolean
 )
 
 @Serializable
@@ -46,6 +49,13 @@ data class GoalMessage(
 @Serializable
 data class PongMessage(
     val type: String = "pong"
+)
+
+@Serializable
+data class HeartbeatMessage(
+    val type: String = "heartbeat",
+    val batteryLevel: Int,
+    val isCharging: Boolean
 )
 
 @Serializable
