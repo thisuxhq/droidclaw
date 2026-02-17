@@ -154,6 +154,8 @@ function executeFlowStep(
         return executeAction({ action: "enter" });
       case "clear":
         return executeAction({ action: "clear" });
+      case "paste":
+        return executeAction({ action: "paste" });
       case "done":
         return executeAction({ action: "done", reason: "Flow complete" });
       default:

@@ -1,5 +1,10 @@
 package com.thisux.droidclaw.ui.screens
 
+import android.app.Activity
+import android.content.Context
+import android.media.projection.MediaProjectionManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,7 +58,16 @@ fun SettingsScreen() {
 
     val isAccessibilityEnabled by DroidClawAccessibilityService.isRunning.collectAsState()
     val isCaptureAvailable by ScreenCaptureManager.isAvailable.collectAsState()
+    val hasCaptureConsent = isCaptureAvailable || ScreenCaptureManager.hasConsent()
     val isBatteryExempt = remember { BatteryOptimization.isIgnoringBatteryOptimizations(context) }
+
+    val projectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            ScreenCaptureManager.storeConsent(result.resultCode, result.data)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -115,9 +129,12 @@ fun SettingsScreen() {
 
         ChecklistItem(
             label = "Screen capture permission",
-            isOk = isCaptureAvailable,
-            actionLabel = null,
-            onAction = {}
+            isOk = hasCaptureConsent,
+            actionLabel = "Grant",
+            onAction = {
+                val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                projectionLauncher.launch(mgr.createScreenCaptureIntent())
+            }
         )
 
         ChecklistItem(

@@ -3,7 +3,7 @@
   "steps": [
     {
       "app": "com.google.android.apps.bard",
-      "goal": "Type 'tell me more about duntasks.com' in the text input field and tap send. Wait for the full AI response to load before marking done.",
+      "goal": "Type 'tell me more about droidclaw.ai' in the text input field and tap send. Wait for the full AI response to load before marking done.",
       "maxSteps": 10
     },
     {

@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { signout } from '$lib/api/auth.remote';
+	import { dashboardWs } from '$lib/stores/dashboard-ws.svelte';
+	import { onMount } from 'svelte';
 
 	let { children, data } = $props();
+
+	onMount(() => {
+		if (data.sessionToken) {
+			dashboardWs.connect(data.sessionToken);
+		}
+		return () => dashboardWs.disconnect();
+	});
 </script>
 
 <div class="flex min-h-screen">

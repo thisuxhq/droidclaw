@@ -25,14 +25,21 @@ import {
   type LLMConfig,
 } from "./llm.js";
 import { createStuckDetector } from "./stuck.js";
+import { db } from "../db.js";
+import { agentSession, agentStep } from "../schema.js";
+import { eq } from "drizzle-orm";
 import type { UIElement, ActionDecision } from "@droidclaw/shared";
 
 // ─── Public Types ───────────────────────────────────────────────
 
 export interface AgentLoopOptions {
   deviceId: string;
+  /** Persistent device ID from DB (for FK references) */
+  persistentDeviceId?: string;
   userId: string;
   goal: string;
+  /** Original goal before preprocessing (if different from goal) */
+  originalGoal?: string;
   llmConfig: LLMConfig;
   maxSteps?: number;
   onStep?: (step: AgentStep) => void;
@@ -211,8 +218,10 @@ export async function runAgentLoop(
 ): Promise<AgentResult> {
   const {
     deviceId,
+    persistentDeviceId,
     userId,
     goal,
+    originalGoal,
     llmConfig,
     maxSteps = 30,
     onStep,
@@ -230,12 +239,28 @@ export async function runAgentLoop(
   const recentActions: string[] = [];
   let lastActionFeedback = "";
 
+  // Persist session to DB
+  if (persistentDeviceId) {
+    try {
+      await db.insert(agentSession).values({
+        id: sessionId,
+        userId,
+        deviceId: persistentDeviceId,
+        goal: originalGoal ?? goal,
+        status: "running",
+        stepsUsed: 0,
+      });
+    } catch (err) {
+      console.error(`[Agent ${sessionId}] Failed to create DB session: ${err}`);
+    }
+  }
+
   // Notify dashboard that a goal has started
   sessions.notifyDashboard(userId, {
     type: "goal_started",
     sessionId,
-    goal,
-    deviceId,
+    goal: originalGoal ?? goal,
+    deviceId: persistentDeviceId ?? deviceId,
   });
 
   let stepsUsed = 0;
@@ -397,7 +422,10 @@ export async function runAgentLoop(
       recentActions.push(actionSig);
       if (recentActions.length > 8) recentActions.shift();
 
-      // ── 7. Done? ────────────────────────────────────────────
+      // ── 7. Log + Done check ────────────────────────────────
+      const reason = action.reason ?? "";
+      console.log(`[Agent ${sessionId}] Step ${step + 1}: ${actionSig} — ${reason}`);
+
       if (action.action === "done") {
         success = true;
         break;
@@ -421,6 +449,23 @@ export async function runAgentLoop(
         screenHash,
       });
 
+      // ── 8b. Persist step to DB ────────────────────────────────
+      const stepId = crypto.randomUUID();
+      if (persistentDeviceId) {
+        db.insert(agentStep)
+          .values({
+            id: stepId,
+            sessionId,
+            stepNumber: step + 1,
+            screenHash,
+            action: action as unknown as Record<string, unknown>,
+            reasoning: action.reason ?? "",
+          })
+          .catch((err) =>
+            console.error(`[Agent ${sessionId}] Failed to save step ${step + 1}: ${err}`)
+          );
+      }
+
       // ── 9. Execute on device ────────────────────────────────
       const command = actionToCommand(action);
       try {
@@ -431,8 +476,19 @@ export async function runAgentLoop(
         };
         const resultSuccess = result.success !== false;
         lastActionFeedback = `${actionSig} -> ${resultSuccess ? "OK" : "FAILED"}: ${result.error ?? result.data ?? "completed"}`;
+        console.log(`[Agent ${sessionId}] Step ${step + 1} result: ${lastActionFeedback}`);
+        // Update step result in DB
+        if (persistentDeviceId) {
+          db.update(agentStep).set({ result: lastActionFeedback }).where(eq(agentStep.id, stepId))
+            .catch(() => {});
+        }
       } catch (err) {
         lastActionFeedback = `${actionSig} -> FAILED: ${(err as Error).message}`;
+        console.log(`[Agent ${sessionId}] Step ${step + 1} result: ${lastActionFeedback}`);
+        if (persistentDeviceId) {
+          db.update(agentStep).set({ result: lastActionFeedback }).where(eq(agentStep.id, stepId))
+            .catch(() => {});
+        }
         console.error(
           `[Agent ${sessionId}] Command error at step ${step + 1}: ${(err as Error).message}`
         );
@@ -446,6 +502,20 @@ export async function runAgentLoop(
   }
 
   const result: AgentResult = { success, stepsUsed, sessionId };
+
+  // Update session in DB
+  if (persistentDeviceId) {
+    db.update(agentSession)
+      .set({
+        status: success ? "completed" : "failed",
+        stepsUsed,
+        completedAt: new Date(),
+      })
+      .where(eq(agentSession.id, sessionId))
+      .catch((err) =>
+        console.error(`[Agent ${sessionId}] Failed to update DB session: ${err}`)
+      );
+  }
 
   sessions.notifyDashboard(userId, {
     type: "goal_completed",

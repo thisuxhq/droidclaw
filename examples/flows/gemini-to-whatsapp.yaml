@@ -1,0 +1,37 @@
+name: Ask Gemini and Share to WhatsApp
+---
+# Ask Gemini
+- shell: "am start -n com.google.android.apps.bard/.shellapp.BardEntryPointActivity"
+- wait: 3
+- tap: "Ask Gemini"
+- type: "tell me more about droidclaw.ai"
+- tap: "Send"
+- wait: 20
+
+# Scroll to bottom to find Copy button
+- swipe: up
+- wait: 0.5
+- swipe: up
+- wait: 0.5
+- swipe: up
+- wait: 0.5
+- swipe: up
+- wait: 0.5
+- swipe: up
+- wait: 0.5
+- tap: "Copy"
+
+# Send to WhatsApp
+- launch: com.whatsapp
+- wait: 1
+- tap: "Search"
+- wait: 0.5
+- type: "Vi"
+- wait: 0.5
+- tap: "Vi"
+- wait: 0.5
+- tap: "Message"
+- paste
+- wait: 0.5
+- tap: "Send"
+- done: "Gemini response shared to WhatsApp"

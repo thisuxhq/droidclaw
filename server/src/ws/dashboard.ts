@@ -1,5 +1,7 @@
 import type { ServerWebSocket } from "bun";
-import { auth } from "../auth.js";
+import { db } from "../db.js";
+import { session as sessionTable } from "../schema.js";
+import { eq } from "drizzle-orm";
 import { sessions, type WebSocketData } from "./sessions.js";
 
 interface DashboardAuthMessage {
@@ -28,21 +30,25 @@ export async function handleDashboardMessage(
 
   if (msg.type === "auth") {
     try {
-      // Verify the session token by constructing a request with the cookie header
-      const sessionResult = await auth.api.getSession({
-        headers: new Headers({
-          cookie: `better-auth.session_token=${msg.token}`,
-        }),
-      });
-
-      if (!sessionResult) {
-        ws.send(
-          JSON.stringify({ type: "auth_error", message: "Invalid session" })
-        );
+      const token = msg.token;
+      if (!token) {
+        ws.send(JSON.stringify({ type: "auth_error", message: "No token" }));
         return;
       }
 
-      const userId = sessionResult.user.id;
+      // Look up session directly in DB
+      const rows = await db
+        .select({ userId: sessionTable.userId })
+        .from(sessionTable)
+        .where(eq(sessionTable.token, token))
+        .limit(1);
+
+      if (rows.length === 0) {
+        ws.send(JSON.stringify({ type: "auth_error", message: "Invalid session" }));
+        return;
+      }
+
+      const userId = rows[0].userId;
 
       // Mark connection as authenticated
       ws.data.authenticated = true;

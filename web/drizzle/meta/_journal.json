@@ -15,6 +15,13 @@
       "when": 1771317679056,
       "tag": "0001_opposite_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771326794177,
+      "tag": "0002_fearless_greymalkin",
+      "breakpoints": true
     }
   ]
 }

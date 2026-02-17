@@ -6,6 +6,8 @@ export interface WebSocketData {
   path: "/ws/device" | "/ws/dashboard";
   userId?: string;
   deviceId?: string;
+  /** Persistent device ID from the `device` DB table (survives reconnects) */
+  persistentDeviceId?: string;
   authenticated: boolean;
 }
 

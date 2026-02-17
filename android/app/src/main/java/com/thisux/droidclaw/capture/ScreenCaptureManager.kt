@@ -21,6 +21,17 @@ class ScreenCaptureManager(private val context: Context) {
         private const val TAG = "ScreenCapture"
         const val REQUEST_CODE = 1001
         val isAvailable = MutableStateFlow(false)
+
+        // Stores MediaProjection consent for use by ConnectionService
+        var consentResultCode: Int? = null
+        var consentData: Intent? = null
+
+        fun storeConsent(resultCode: Int, data: Intent?) {
+            consentResultCode = resultCode
+            consentData = data
+        }
+
+        fun hasConsent(): Boolean = consentResultCode != null && consentData != null
     }
 
     private var mediaProjection: MediaProjection? = null

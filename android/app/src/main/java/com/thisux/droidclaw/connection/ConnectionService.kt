@@ -91,7 +91,18 @@ class ConnectionService : LifecycleService() {
                 return@launch
             }
 
-            captureManager = ScreenCaptureManager(this@ConnectionService)
+            captureManager = ScreenCaptureManager(this@ConnectionService).also { mgr ->
+                if (ScreenCaptureManager.hasConsent()) {
+                    try {
+                        mgr.initialize(
+                            ScreenCaptureManager.consentResultCode!!,
+                            ScreenCaptureManager.consentData!!
+                        )
+                    } catch (e: SecurityException) {
+                        Log.w(TAG, "Screen capture unavailable (needs mediaProjection service type): ${e.message}")
+                    }
+                }
+            }
 
             val ws = ReliableWebSocket(lifecycleScope) { msg ->
                 commandRouter?.handleMessage(msg)

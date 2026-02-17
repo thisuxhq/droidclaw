@@ -63,6 +63,8 @@ const server = Bun.serve<WebSocketData>({
     return app.fetch(req);
   },
   websocket: {
+    idleTimeout: 120,
+    sendPings: true,
     open(ws) {
       console.log(`WebSocket opened: ${ws.data.path}`);
     },
@@ -73,12 +75,17 @@ const server = Bun.serve<WebSocketData>({
           : new TextDecoder().decode(message);
 
       if (ws.data.path === "/ws/device") {
-        handleDeviceMessage(ws, raw);
+        handleDeviceMessage(ws, raw).catch((err) => {
+          console.error(`Device message handler error: ${err}`);
+        });
       } else if (ws.data.path === "/ws/dashboard") {
-        handleDashboardMessage(ws, raw);
+        handleDashboardMessage(ws, raw).catch((err) => {
+          console.error(`Dashboard message handler error: ${err}`);
+        });
       }
     },
-    close(ws) {
+    close(ws, code, reason) {
+      console.log(`WebSocket closed: ${ws.data.path} device=${ws.data.deviceId ?? "unknown"} code=${code} reason=${reason}`);
       if (ws.data.path === "/ws/device") {
         handleDeviceClose(ws);
       } else if (ws.data.path === "/ws/dashboard") {
