@@ -7,7 +7,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src",
     "types": ["bun"],
     "paths": {
       "@droidclaw/shared": ["../packages/shared/src"]
