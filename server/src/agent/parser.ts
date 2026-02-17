@@ -339,6 +339,7 @@ export function parseGoal(
   caps: DeviceCapabilities
 ): PipelineResult {
   const trimmed = goal.trim();
+  if (!trimmed) return { stage: "parser", type: "done", reason: "Empty goal" };
   for (const matcher of PATTERNS) {
     const result = matcher(trimmed, caps);
     if (result) return result;

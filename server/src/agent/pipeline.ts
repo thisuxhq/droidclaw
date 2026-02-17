@@ -8,6 +8,7 @@
 import type {
   InstalledApp,
   PipelineResult,
+  ActionDecision,
 } from "@droidclaw/shared";
 import { sessions } from "../ws/sessions.js";
 import { db } from "../db.js";
@@ -185,7 +186,7 @@ export async function runPipeline(
 
       onStep?.({
         stepNumber: 1,
-        action: { action: parseResult.type, reason: `Parser: ${parseResult.type}` } as any,
+        action: { action: parseResult.type, reason: `Parser: ${parseResult.type}` } as unknown as ActionDecision,
         reasoning: `Parser: direct ${parseResult.type} action`,
         screenHash: "",
       });
@@ -228,7 +229,7 @@ export async function runPipeline(
 
       onStep?.({
         stepNumber: 1,
-        action: { action: "intent", reason: "Classifier: intent" } as any,
+        action: { action: "intent", intentAction: classResult.intent.intentAction, uri: classResult.intent.uri, reason: "Classifier: intent" } as unknown as ActionDecision,
         reasoning: `Classifier: ${classResult.intent.intentAction}`,
         screenHash: "",
       });

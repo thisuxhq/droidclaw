@@ -62,12 +62,16 @@ export async function classifyGoal(
 
   switch (parsed.type) {
     case "intent": {
+      const rawExtras = parsed.extras;
+      const validExtras = (rawExtras && typeof rawExtras === "object" && !Array.isArray(rawExtras))
+        ? rawExtras as Record<string, string>
+        : undefined;
       const intent: IntentCommand = {
-        intentAction: (parsed.intentAction as string) ?? "",
-        uri: parsed.uri as string | undefined,
-        intentType: parsed.intentType as string | undefined,
-        extras: parsed.extras as Record<string, string> | undefined,
-        packageName: parsed.packageName as string | undefined,
+        intentAction: typeof parsed.intentAction === "string" ? parsed.intentAction : "",
+        uri: typeof parsed.uri === "string" ? parsed.uri : undefined,
+        intentType: typeof parsed.intentType === "string" ? parsed.intentType : undefined,
+        extras: validExtras,
+        packageName: typeof parsed.packageName === "string" ? parsed.packageName : undefined,
       };
       if (!intent.intentAction) {
         console.warn("[Classifier] Intent missing intentAction, falling through");

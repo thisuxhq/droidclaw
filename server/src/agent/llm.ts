@@ -293,7 +293,8 @@ Scrolling:
 
 App Control:
   {"action": "launch", "package": "com.app.name", "reason": "Open app"}
-  {"action": "switch_app", "package": "com.app.name", "reason": "Switch app"}`;
+  {"action": "switch_app", "package": "com.app.name", "reason": "Switch app"}
+  {"action": "intent", "intentAction": "android.intent.action.VIEW", "uri": "tel:123", "reason": "Fire Android intent directly"}`;
 
   // Multi-step actions (always useful)
   actions += `
