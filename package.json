@@ -1,12 +1,20 @@
 {
   "name": "droidclaw",
-  "workspaces": ["packages/*", "server"],
+  "private": true,
+  "packageManager": "bun@1.3.5",
+  "workspaces": ["packages/*", "server", "web"],
   "version": "1.0.0",
   "description": "AI agent that takes control of your Android phone — give it a goal, it figures out the taps",
   "type": "module",
   "scripts": {
-    "start": "bun run src/kernel.ts",
-    "build": "bun build src/kernel.ts --outdir dist --target bun",
+    "start": "bun run --cwd web start",
+    "build": "bun run --cwd web build",
+    "start:agent": "bun run src/kernel.ts",
+    "build:agent": "bun build src/kernel.ts --outdir dist --target bun",
+    "build:web": "bun run --cwd web build",
+    "dev:web": "bun run --cwd web dev",
+    "dev:server": "bun run --cwd server dev",
+    "db:push": "bun run --cwd web db:push",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
