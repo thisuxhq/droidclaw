@@ -16,13 +16,15 @@ export async function sessionMiddleware(c: Context, next: Next) {
   // Extract session token from cookie (same approach as dashboard WS auth)
   const rawCookie = getCookie(c, "better-auth.session_token");
   if (!rawCookie) {
+    console.log(`[SessionMiddleware] No session cookie. Headers: ${JSON.stringify(Object.fromEntries(c.req.raw.headers.entries())).slice(0, 200)}`);
     return c.json({ error: "unauthorized" }, 401);
   }
 
   // Token may have a signature appended after a dot — use only the token part
   const token = rawCookie.split(".")[0];
+  console.log(`[SessionMiddleware] cookie prefix: ${rawCookie.slice(0, 20)}... token prefix: ${token.slice(0, 20)}...`);
 
-  // Direct DB lookup (proven to work, unlike auth.api.getSession)
+  // Direct DB lookup
   const rows = await db
     .select({
       sessionId: sessionTable.id,
