@@ -27,6 +27,9 @@ import com.thisux.droidclaw.model.InstalledAppInfo
 import com.thisux.droidclaw.util.DeviceInfoHelper
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.Settings
+import com.thisux.droidclaw.model.StopGoalMessage
+import com.thisux.droidclaw.overlay.AgentOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -56,11 +59,13 @@ class ConnectionService : LifecycleService() {
     private var commandRouter: CommandRouter? = null
     private var captureManager: ScreenCaptureManager? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var overlay: AgentOverlay? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         createNotificationChannel()
+        overlay = AgentOverlay(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -97,6 +102,7 @@ class ConnectionService : LifecycleService() {
                 return@launch
             }
 
+            ScreenCaptureManager.restoreConsent(this@ConnectionService)
             captureManager = ScreenCaptureManager(this@ConnectionService).also { mgr ->
                 if (ScreenCaptureManager.hasConsent()) {
                     try {
@@ -105,7 +111,8 @@ class ConnectionService : LifecycleService() {
                             ScreenCaptureManager.consentData!!
                         )
                     } catch (e: SecurityException) {
-                        Log.w(TAG, "Screen capture unavailable (needs mediaProjection service type): ${e.message}")
+                        Log.w(TAG, "Screen capture unavailable: ${e.message}")
+                        ScreenCaptureManager.clearConsent(this@ConnectionService)
                     }
                 }
             }
@@ -131,6 +138,9 @@ class ConnectionService : LifecycleService() {
                     )
                     // Send installed apps list once connected
                     if (state == ConnectionState.Connected) {
+                        if (Settings.canDrawOverlays(this@ConnectionService)) {
+                            overlay?.show()
+                        }
                         val apps = getInstalledApps()
                         webSocket?.sendTyped(AppsMessage(apps = apps))
                         Log.i(TAG, "Sent ${apps.size} installed apps to server")
@@ -167,7 +177,12 @@ class ConnectionService : LifecycleService() {
         webSocket?.sendTyped(GoalMessage(text = text))
     }
 
+    fun stopGoal() {
+        webSocket?.sendTyped(StopGoalMessage())
+    }
+
     private fun disconnect() {
+        overlay?.hide()
         webSocket?.disconnect()
         webSocket = null
         commandRouter?.reset()
@@ -179,6 +194,8 @@ class ConnectionService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        overlay?.destroy()
+        overlay = null
         disconnect()
         instance = null
         super.onDestroy()

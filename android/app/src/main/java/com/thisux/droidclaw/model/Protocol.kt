@@ -72,6 +72,11 @@ data class AppsMessage(
 )
 
 @Serializable
+data class StopGoalMessage(
+    val type: String = "stop_goal"
+)
+
+@Serializable
 data class ServerMessage(
     val type: String,
     val requestId: String? = null,

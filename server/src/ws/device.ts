@@ -22,7 +22,7 @@ async function hashApiKey(key: string): Promise<string> {
 }
 
 /** Track running agent sessions to prevent duplicates per device */
-const activeSessions = new Map<string, string>();
+const activeSessions = new Map<string, { goal: string; abort: AbortController }>();
 
 /**
  * Send a JSON message to a device WebSocket (safe — catches send errors).
@@ -252,7 +252,8 @@ export async function handleDeviceMessage(
       }
 
       console.log(`[Pipeline] Starting goal for device ${deviceId}: ${goal}`);
-      activeSessions.set(deviceId, goal);
+      const abortController = new AbortController();
+      activeSessions.set(deviceId, { goal, abort: abortController });
 
       sendToDevice(ws, { type: "goal_started", sessionId: deviceId, goal });
 
@@ -262,6 +263,7 @@ export async function handleDeviceMessage(
         userId,
         goal,
         llmConfig: userLlmConfig,
+        signal: abortController.signal,
         onStep(step) {
           sendToDevice(ws, {
             type: "step",
@@ -291,6 +293,23 @@ export async function handleDeviceMessage(
     }
 
     case "pong": {
+      break;
+    }
+
+    case "stop_goal": {
+      const deviceId = ws.data.deviceId!;
+      const active = activeSessions.get(deviceId);
+      if (active) {
+        console.log(`[Pipeline] Stop requested for device ${deviceId}`);
+        active.abort.abort();
+        activeSessions.delete(deviceId);
+        sendToDevice(ws, {
+          type: "goal_completed",
+          sessionId: deviceId,
+          success: false,
+          stepsUsed: 0,
+        });
+      }
       break;
     }
 
@@ -360,7 +379,11 @@ export function handleDeviceClose(
   const { deviceId, userId, persistentDeviceId } = ws.data;
   if (!deviceId) return;
 
-  activeSessions.delete(deviceId);
+  const active = activeSessions.get(deviceId);
+  if (active) {
+    active.abort.abort();
+    activeSessions.delete(deviceId);
+  }
   sessions.removeDevice(deviceId);
 
   // Update device status in DB

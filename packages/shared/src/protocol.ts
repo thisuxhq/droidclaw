@@ -7,7 +7,8 @@ export type DeviceMessage =
   | { type: "goal"; text: string }
   | { type: "pong" }
   | { type: "heartbeat"; batteryLevel: number; isCharging: boolean }
-  | { type: "apps"; apps: InstalledApp[] };
+  | { type: "apps"; apps: InstalledApp[] }
+  | { type: "stop_goal" };
 
 export type ServerToDeviceMessage =
   | { type: "auth_ok"; deviceId: string }
