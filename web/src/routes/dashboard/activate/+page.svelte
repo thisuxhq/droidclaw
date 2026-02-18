@@ -1,38 +1,66 @@
 <script lang="ts">
 	import { activateLicense, activateFromCheckout } from '$lib/api/license.remote';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { LICENSE_ACTIVATE_CHECKOUT, LICENSE_ACTIVATE_MANUAL, LICENSE_PURCHASE_CLICK } from '$lib/analytics/events';
 
 	const checkoutId = page.url.searchParams.get('checkout_id');
 
 	let showKeyInput = $state(false);
+	let checkoutStatus = $state<'activating' | 'error' | 'idle'>('idle');
+	let checkoutError = $state('');
+
+	async function activateCheckout() {
+		if (!checkoutId) return;
+		checkoutStatus = 'activating';
+		checkoutError = '';
+		try {
+			await activateFromCheckout({ checkoutId });
+			goto('/dashboard');
+		} catch (e: any) {
+			checkoutError = e.message ?? 'Failed to activate from checkout';
+			checkoutStatus = 'error';
+		}
+	}
+
+	onMount(() => {
+		if (checkoutId) activateCheckout();
+	});
 </script>
 
 {#if checkoutId}
 	<!-- Auto-activate from Polar checkout -->
 	<div class="mx-auto max-w-md pt-20">
-		<div class="mb-8 text-center">
-			<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100">
-				<Icon icon="ph:spinner-duotone" class="h-6 w-6 animate-spin text-neutral-600" />
+		{#if checkoutStatus === 'activating'}
+			<div class="mb-8 text-center">
+				<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100">
+					<Icon icon="ph:spinner-duotone" class="h-6 w-6 animate-spin text-neutral-600" />
+				</div>
+				<h2 class="text-2xl font-bold">Activating your license...</h2>
+				<p class="mt-1 text-neutral-500">
+					We're setting up your account. This will only take a moment.
+				</p>
 			</div>
-			<h2 class="text-2xl font-bold">Activating your license...</h2>
-			<p class="mt-1 text-neutral-500">
-				We're setting up your account. This will only take a moment.
-			</p>
-		</div>
+		{:else if checkoutStatus === 'error'}
+			<div class="mb-8 text-center">
+				<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50">
+					<Icon icon="ph:warning-duotone" class="h-6 w-6 text-red-500" />
+				</div>
+				<h2 class="text-2xl font-bold">Activation failed</h2>
+				<p class="mt-1 text-neutral-500">{checkoutError}</p>
+			</div>
 
-		<form {...activateFromCheckout} class="space-y-4">
-			<input type="hidden" {...activateFromCheckout.fields.checkoutId.as('text')} value={checkoutId} />
 			<button
-				type="submit"
+				onclick={activateCheckout}
 				data-umami-event={LICENSE_ACTIVATE_CHECKOUT}
 				class="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 py-2.5 font-medium text-white hover:bg-neutral-800"
 			>
-				<Icon icon="ph:seal-check-duotone" class="h-4 w-4" />
-				Activate Now
+				<Icon icon="ph:arrow-clockwise-duotone" class="h-4 w-4" />
+				Retry
 			</button>
-		</form>
+		{/if}
 
 		<div class="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
 			<p class="text-center text-sm text-neutral-500">

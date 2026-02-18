@@ -55,12 +55,18 @@ license.post("/activate", async (c) => {
     // Determine plan from benefit ID or default to "ltd"
     const plan = "ltd";
 
-    // Activate the key (tracks activation count on Polar's side)
-    await polar.licenseKeys.activate({
-      key,
-      organizationId: env.POLAR_ORGANIZATION_ID,
-      label: `${currentUser.email}`,
-    });
+    // Activate the key (may fail if already activated from previous attempt)
+    try {
+      await polar.licenseKeys.activate({
+        key,
+        organizationId: env.POLAR_ORGANIZATION_ID,
+        label: `${currentUser.email}`,
+      });
+    } catch (activateErr) {
+      const msg = activateErr instanceof Error ? activateErr.message : String(activateErr);
+      if (!msg.includes("limit")) throw activateErr;
+      console.log(`[License] Key already activated for ${currentUser.email}, storing anyway`);
+    }
 
     // Store on user record
     await db
@@ -140,12 +146,19 @@ license.post("/activate-checkout", async (c) => {
       return c.json({ error: "No license key found for this purchase" }, 400);
     }
 
-    // 3. Activate the key
-    await polar.licenseKeys.activate({
-      key: customerKey.key,
-      organizationId: env.POLAR_ORGANIZATION_ID,
-      label: `${currentUser.email}`,
-    });
+    // 3. Activate the key (may fail if already activated from previous attempt)
+    try {
+      await polar.licenseKeys.activate({
+        key: customerKey.key,
+        organizationId: env.POLAR_ORGANIZATION_ID,
+        label: `${currentUser.email}`,
+      });
+    } catch (activateErr) {
+      const msg = activateErr instanceof Error ? activateErr.message : String(activateErr);
+      if (!msg.includes("limit")) throw activateErr;
+      // Limit reached = key was already activated, that's fine — proceed to store
+      console.log(`[License] Key already activated for ${currentUser.email}, storing anyway`);
+    }
 
     // 4. Store on user record
     await db
@@ -161,6 +174,14 @@ license.post("/activate-checkout", async (c) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[License] Checkout activation failed for ${currentUser.email}:`, message);
+
+    if (message.includes("limit")) {
+      return c.json({ error: "License key activation limit reached" }, 400);
+    }
+    if (message.includes("not found") || message.includes("invalid")) {
+      return c.json({ error: "Invalid or expired checkout" }, 400);
+    }
+
     return c.json({ error: "Failed to activate from checkout" }, 500);
   }
 });
