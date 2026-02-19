@@ -1,9 +1,12 @@
 package com.thisux.droidclaw
 
+import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -47,6 +50,12 @@ sealed class Screen(val route: String, val label: String) {
 }
 
 class MainActivity : ComponentActivity() {
+    private val audioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // Permission result handled — user can tap overlay pill again
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,6 +63,16 @@ class MainActivity : ComponentActivity() {
             DroidClawTheme {
                 MainNavigation()
             }
+        }
+        if (intent?.getBooleanExtra("request_audio_permission", false) == true) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra("request_audio_permission", false)) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 }
