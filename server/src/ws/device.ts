@@ -410,7 +410,13 @@ export async function handleDeviceMessage(
         .where(eq(llmConfig.userId, userId))
         .limit(1);
 
-      const groqKey = configs[0]?.apiKey ?? "";
+      if (configs.length === 0 || !configs[0].apiKey) {
+        handleVoiceCancel(deviceId);
+        sendToDevice(ws, { type: "transcript_final", text: "" });
+        break;
+      }
+
+      const groqKey = configs[0].apiKey;
       const transcript = await handleVoiceSend(ws, deviceId, groqKey);
 
       if (transcript) {
@@ -488,6 +494,7 @@ export function handleDeviceClose(
     active.abort.abort();
     activeSessions.delete(deviceId);
   }
+  handleVoiceCancel(deviceId);
   sessions.removeDevice(deviceId);
 
   // Update device status in DB

@@ -79,6 +79,7 @@ class CommandRouter(
             }
             "goal_failed" -> {
                 currentGoalStatus.value = GoalStatus.Failed
+                ConnectionService.instance?.overlay?.returnToIdle()
                 Log.i(TAG, "Goal failed: ${msg.message}")
             }
 
