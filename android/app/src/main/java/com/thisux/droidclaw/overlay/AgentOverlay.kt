@@ -18,6 +18,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.thisux.droidclaw.MainActivity
 import com.thisux.droidclaw.connection.ConnectionService
+import com.thisux.droidclaw.model.ConnectionState
+import com.thisux.droidclaw.model.GoalStatus
 import com.thisux.droidclaw.model.OverlayMode
 import com.thisux.droidclaw.ui.theme.DroidClawTheme
 
@@ -190,16 +192,7 @@ class AgentOverlay(private val service: LifecycleService) {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             setViewTreeLifecycleOwner(service)
             setViewTreeSavedStateRegistryOwner(savedStateOwner)
-            setContent {
-                OverlayContent(
-                    onTextTap = {
-                        hidePill()
-                        commandPanel.show()
-                    },
-                    onMicTap = { startListening() },
-                    onStopTap = { ConnectionService.instance?.stopGoal() }
-                )
-            }
+            setContent { OverlayContent() }
             setupDrag(this)
         }
 
@@ -261,13 +254,8 @@ class AgentOverlay(private val service: LifecycleService) {
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
-        var forwardingTap = false
 
-        view.setOnTouchListener { v, event ->
-            // Re-entrancy guard: when we forward a synthetic tap to Compose,
-            // dispatchTouchEvent re-invokes this listener. Let it pass through.
-            if (forwardingTap) return@setOnTouchListener false
-
+        view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = pillParams.x
@@ -275,7 +263,7 @@ class AgentOverlay(private val service: LifecycleService) {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    true // must consume DOWN to receive MOVE/UP for drag
+                    true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
@@ -301,21 +289,31 @@ class AgentOverlay(private val service: LifecycleService) {
                             hide()
                         }
                         isDragging = false
-                        true
                     } else {
-                        // Not a drag — forward as synthetic tap to Compose
-                        forwardingTap = true
-                        val down = MotionEvent.obtain(
-                            event.downTime, event.eventTime,
-                            MotionEvent.ACTION_DOWN,
-                            event.x, event.y, 0
-                        )
-                        v.dispatchTouchEvent(down)
-                        down.recycle()
-                        v.dispatchTouchEvent(event)
-                        forwardingTap = false
-                        true
+                        // Tap: route based on state and tap position
+                        val status = ConnectionService.currentGoalStatus.value
+                        val connected = ConnectionService.connectionState.value ==
+                                ConnectionState.Connected
+
+                        if (connected && status == GoalStatus.Running) {
+                            ConnectionService.instance?.stopGoal()
+                        } else if (connected && status == GoalStatus.Idle) {
+                            // Right ~44dp is the mic icon zone
+                            val iconZonePx = (44 * view.context.resources.displayMetrics.density)
+                            if (event.x > view.width - iconZonePx) {
+                                startListening()
+                            } else {
+                                hidePill()
+                                commandPanel.show()
+                            }
+                        } else if (status == GoalStatus.Idle || !connected) {
+                            // Disconnected or other idle: open command panel
+                            hidePill()
+                            commandPanel.show()
+                        }
+                        // Completed/Failed: ignore tap (auto-collapses)
                     }
+                    true
                 }
                 else -> false
             }

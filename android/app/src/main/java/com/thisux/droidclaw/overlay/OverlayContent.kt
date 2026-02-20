@@ -8,8 +8,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,11 +52,7 @@ private val Gray = Color(0xFF9E9E9E)
 private val PillBackground = Color(0xFF1A1A1A)
 
 @Composable
-fun OverlayContent(
-    onTextTap: () -> Unit = {},
-    onMicTap: () -> Unit = {},
-    onStopTap: () -> Unit = {}
-) {
+fun OverlayContent() {
     DroidClawTheme(darkTheme = true) {
         val connectionState by ConnectionService.connectionState.collectAsState()
         val goalStatus by ConnectionService.currentGoalStatus.collectAsState()
@@ -76,16 +70,15 @@ fun OverlayContent(
         val isConnected = connectionState == ConnectionState.Connected
         val isRunning = isConnected && displayStatus == GoalStatus.Running
         val isIdle = isConnected && displayStatus == GoalStatus.Idle
-        val isDisconnected = !isConnected
 
         // Status dot color
         val dotColor by animateColorAsState(
             targetValue = when {
-                isDisconnected -> Gray
+                !isConnected -> Gray
                 displayStatus == GoalStatus.Running -> Red
                 displayStatus == GoalStatus.Completed -> Blue
                 displayStatus == GoalStatus.Failed -> Gray
-                else -> Green // idle + connected
+                else -> Green
             },
             label = "dotColor"
         )
@@ -109,7 +102,7 @@ fun OverlayContent(
 
         // Status text
         val statusText = when {
-            isDisconnected -> "offline"
+            !isConnected -> "offline"
             displayStatus == GoalStatus.Running -> {
                 val latestStep = steps.lastOrNull()
                 if (latestStep != null) {
@@ -120,11 +113,8 @@ fun OverlayContent(
             }
             displayStatus == GoalStatus.Completed -> "completed"
             displayStatus == GoalStatus.Failed -> "failed"
-            else -> "ready" // idle + connected
+            else -> "ready"
         }
-
-        // Text area clickable only when idle or disconnected
-        val textClickable = isIdle || isDisconnected
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -145,7 +135,7 @@ fun OverlayContent(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Status text
+            // Status text (no clickable — touch handled by AgentOverlay)
             Text(
                 text = statusText,
                 color = Color.White,
@@ -153,22 +143,10 @@ fun OverlayContent(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .widthIn(max = 200.dp)
-                    .then(
-                        if (textClickable) {
-                            Modifier.clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onTextTap
-                            )
-                        } else {
-                            Modifier
-                        }
-                    )
+                modifier = Modifier.widthIn(max = 200.dp)
             )
 
-            // Right icon (conditional)
+            // Right icon (visual only — tap handled by AgentOverlay)
             when {
                 isIdle -> {
                     Spacer(modifier = Modifier.width(12.dp))
@@ -176,13 +154,7 @@ fun OverlayContent(
                         imageVector = Icons.Filled.Mic,
                         contentDescription = "Voice input",
                         tint = Green,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onMicTap
-                            )
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 isRunning -> {
@@ -191,16 +163,9 @@ fun OverlayContent(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "Stop",
                         tint = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onStopTap
-                            )
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                // disconnected, completed, failed: no icon
             }
         }
     }
