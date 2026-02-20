@@ -177,6 +177,11 @@ class AgentOverlay(private val service: LifecycleService) {
         mode.value = OverlayMode.Idle
     }
 
+    fun showCommandPanel() {
+        hide()
+        commandPanel.show()
+    }
+
     // ── Private: Pill overlay ───────────────────────────────
 
     private fun showPill() {

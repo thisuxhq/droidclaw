@@ -45,15 +45,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.thisux.droidclaw.DroidClawApp
 import com.thisux.droidclaw.connection.ConnectionService
 import com.thisux.droidclaw.model.AgentStep
 import com.thisux.droidclaw.model.ConnectionState
 import com.thisux.droidclaw.model.GoalStatus
 import com.thisux.droidclaw.ui.theme.StatusGreen
 import com.thisux.droidclaw.ui.theme.StatusRed
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private val DEFAULT_SUGGESTIONS = listOf(
+    "Open WhatsApp and reply to the last message",
+    "Take a screenshot and save it",
+    "Turn on Do Not Disturb",
+    "Search for nearby restaurants on Maps"
+)
 
 // Represents a message in the chat timeline
 private sealed class ChatItem {
@@ -65,12 +75,27 @@ private sealed class ChatItem {
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
+    val app = context.applicationContext as DroidClawApp
     val connectionState by ConnectionService.connectionState.collectAsState()
     val goalStatus by ConnectionService.currentGoalStatus.collectAsState()
     val steps by ConnectionService.currentSteps.collectAsState()
     val currentGoal by ConnectionService.currentGoal.collectAsState()
+    val recentGoals by app.settingsStore.recentGoals.collectAsState(initial = emptyList())
 
     var goalInput by remember { mutableStateOf("") }
+
+    val isConnected = connectionState == ConnectionState.Connected
+    val canSend = isConnected && goalStatus != GoalStatus.Running
+
+    val suggestions = remember(recentGoals) {
+        val combined = mutableListOf<String>()
+        combined.addAll(recentGoals.take(4))
+        for (default in DEFAULT_SUGGESTIONS) {
+            if (combined.size >= 4) break
+            if (default !in combined) combined.add(default)
+        }
+        combined.take(4)
+    }
 
     // Build chat items: goal bubble → step bubbles → status bubble
     val chatItems = remember(currentGoal, steps, goalStatus) {
@@ -105,7 +130,10 @@ fun HomeScreen() {
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                ) {
                     Text(
                         text = "What should I do?",
                         style = MaterialTheme.typography.headlineSmall,
@@ -117,6 +145,33 @@ fun HomeScreen() {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
                     )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (row in suggestions.chunked(2)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (suggestion in row) {
+                                    SuggestionCard(
+                                        text = suggestion,
+                                        enabled = canSend,
+                                        onClick = {
+                                            val intent = Intent(context, ConnectionService::class.java).apply {
+                                                action = ConnectionService.ACTION_SEND_GOAL
+                                                putExtra(ConnectionService.EXTRA_GOAL, suggestion)
+                                            }
+                                            context.startService(intent)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (row.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } else {
@@ -362,6 +417,39 @@ private fun InputBar(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionCard(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(72.dp),
+        enabled = enabled,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

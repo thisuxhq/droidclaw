@@ -5,6 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,12 +40,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.thisux.droidclaw.ui.components.PermissionStatusBar
+import com.thisux.droidclaw.model.ConnectionState
 import com.thisux.droidclaw.ui.screens.HomeScreen
 import com.thisux.droidclaw.ui.screens.LogsScreen
 import com.thisux.droidclaw.ui.screens.OnboardingScreen
 import com.thisux.droidclaw.ui.screens.SettingsScreen
 import com.thisux.droidclaw.ui.theme.DroidClawTheme
 import com.thisux.droidclaw.ui.theme.InstrumentSerif
+import com.thisux.droidclaw.ui.theme.StatusRed
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 
 sealed class Screen(val route: String, val label: String) {
     data object Home : Screen("home", "Home")
@@ -69,6 +82,7 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra("request_audio_permission", false) == true) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+        autoConnectIfNeeded()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -83,6 +97,20 @@ class MainActivity : ComponentActivity() {
         val service = ConnectionService.instance ?: return
         if (Settings.canDrawOverlays(this)) {
             service.overlay?.show()
+        }
+    }
+
+    private fun autoConnectIfNeeded() {
+        if (ConnectionService.connectionState.value != com.thisux.droidclaw.model.ConnectionState.Disconnected) return
+        val app = application as DroidClawApp
+        lifecycleScope.launch {
+            val apiKey = app.settingsStore.apiKey.first()
+            if (apiKey.isNotBlank()) {
+                val intent = Intent(this@MainActivity, ConnectionService::class.java).apply {
+                    action = ConnectionService.ACTION_CONNECT
+                }
+                startForegroundService(intent)
+            }
         }
     }
 }
@@ -183,11 +211,32 @@ fun MainNavigation() {
     ) { innerPadding ->
         val startDestination = if (hasOnboarded) Screen.Home.route else Screen.Onboarding.route
 
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
-        ) {
+        val connectionState by ConnectionService.connectionState.collectAsState()
+        val errorMessage by ConnectionService.errorMessage.collectAsState()
+
+        Column(modifier = Modifier.padding(innerPadding)) {
+            if (showChrome && connectionState == ConnectionState.Error) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(StatusRed.copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = errorMessage ?: "Connection error",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StatusRed
+                    )
+                }
+            }
+
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.weight(1f)
+            ) {
             composable(Screen.Onboarding.route) {
                 OnboardingScreen(
                     onComplete = {
@@ -200,6 +249,7 @@ fun MainNavigation() {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Settings.route) { SettingsScreen() }
             composable(Screen.Logs.route) { LogsScreen() }
+        }
         }
     }
 }

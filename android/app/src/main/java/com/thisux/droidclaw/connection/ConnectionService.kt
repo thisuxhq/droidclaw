@@ -58,6 +58,7 @@ class ConnectionService : LifecycleService() {
         const val ACTION_CONNECT = "com.thisux.droidclaw.CONNECT"
         const val ACTION_DISCONNECT = "com.thisux.droidclaw.DISCONNECT"
         const val ACTION_SEND_GOAL = "com.thisux.droidclaw.SEND_GOAL"
+        const val ACTION_SHOW_COMMAND_PANEL = "com.thisux.droidclaw.SHOW_COMMAND_PANEL"
         const val EXTRA_GOAL = "goal_text"
     }
 
@@ -107,6 +108,9 @@ class ConnectionService : LifecycleService() {
             ACTION_SEND_GOAL -> {
                 val goal = intent.getStringExtra(EXTRA_GOAL) ?: return START_NOT_STICKY
                 sendGoal(goal)
+            }
+            ACTION_SHOW_COMMAND_PANEL -> {
+                overlay?.showCommandPanel()
             }
         }
 

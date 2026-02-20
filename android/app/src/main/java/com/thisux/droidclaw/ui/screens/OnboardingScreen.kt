@@ -1,10 +1,12 @@
 package com.thisux.droidclaw.ui.screens
 
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -99,10 +102,22 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 }
             )
             1 -> OnboardingStepTwo(
-                onGetStarted = {
+                onContinue = { currentStep = 2 }
+            )
+            2 -> OnboardingStepAssistant(
+                onContinue = {
                     scope.launch {
                         app.settingsStore.setHasOnboarded(true)
-                        // Auto-connect
+                        val intent = Intent(context, ConnectionService::class.java).apply {
+                            action = ConnectionService.ACTION_CONNECT
+                        }
+                        context.startForegroundService(intent)
+                        onComplete()
+                    }
+                },
+                onSkip = {
+                    scope.launch {
+                        app.settingsStore.setHasOnboarded(true)
                         val intent = Intent(context, ConnectionService::class.java).apply {
                             action = ConnectionService.ACTION_CONNECT
                         }
@@ -191,7 +206,7 @@ private fun OnboardingStepOne(
 }
 
 @Composable
-private fun OnboardingStepTwo(onGetStarted: () -> Unit) {
+private fun OnboardingStepTwo(onContinue: () -> Unit) {
     val context = LocalContext.current
     val isCaptureAvailable by ScreenCaptureManager.isAvailable.collectAsState()
 
@@ -312,14 +327,14 @@ private fun OnboardingStepTwo(onGetStarted: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = onGetStarted,
+            onClick = onContinue,
             enabled = allGranted,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Get Started", style = MaterialTheme.typography.labelLarge)
+            Text("Continue", style = MaterialTheme.typography.labelLarge)
         }
 
         if (!allGranted) {
@@ -331,6 +346,92 @@ private fun OnboardingStepTwo(onGetStarted: () -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun OnboardingStepAssistant(
+    onContinue: () -> Unit,
+    onSkip: () -> Unit
+) {
+    val context = LocalContext.current
+
+    var isDefaultAssistant by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val rm = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+                rm.isRoleHeld(RoleManager.ROLE_ASSISTANT)
+            } else false
+        )
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isDefaultAssistant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val rm = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+                    rm.isRoleHeld(RoleManager.ROLE_ASSISTANT)
+                } else false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 48.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Digital Assistant",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Set DroidClaw as your default digital assistant to invoke it with a long-press on the home button",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OnboardingChecklistItem(
+            label = "Default Digital Assistant",
+            description = "Long-press home to open DroidClaw command panel",
+            isOk = isDefaultAssistant,
+            actionLabel = "Set",
+            onAction = {
+                context.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS))
+            }
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = onContinue,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Get Started", style = MaterialTheme.typography.labelLarge)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(onClick = onSkip) {
+            Text("Skip for now")
         }
     }
 }
