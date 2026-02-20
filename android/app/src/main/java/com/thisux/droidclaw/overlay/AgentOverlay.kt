@@ -261,8 +261,13 @@ class AgentOverlay(private val service: LifecycleService) {
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
+        var forwardingTap = false
 
         view.setOnTouchListener { v, event ->
+            // Re-entrancy guard: when we forward a synthetic tap to Compose,
+            // dispatchTouchEvent re-invokes this listener. Let it pass through.
+            if (forwardingTap) return@setOnTouchListener false
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = pillParams.x
@@ -270,8 +275,7 @@ class AgentOverlay(private val service: LifecycleService) {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    // Let Compose also receive the DOWN event
-                    false
+                    true // must consume DOWN to receive MOVE/UP for drag
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
@@ -279,27 +283,19 @@ class AgentOverlay(private val service: LifecycleService) {
                     if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
                         isDragging = true
                         dismissTarget.show()
-                        // Cancel Compose's touch tracking so it doesn't
-                        // fire a click when the drag ends
-                        val cancel = MotionEvent.obtain(event).apply {
-                            action = MotionEvent.ACTION_CANCEL
-                        }
-                        v.dispatchTouchEvent(cancel)
-                        cancel.recycle()
                     }
                     if (isDragging) {
                         pillParams.x = initialX + dx
                         pillParams.y = initialY + dy
                         windowManager.updateViewLayout(view, pillParams)
                     }
-                    isDragging
+                    true
                 }
                 MotionEvent.ACTION_UP -> {
                     if (isDragging) {
                         val dismissed = dismissTarget.isOverTarget(event.rawX, event.rawY)
                         dismissTarget.hide()
                         if (dismissed) {
-                            // Reset position to default so next show() starts clean
                             pillParams.x = 0
                             pillParams.y = 200
                             hide()
@@ -307,9 +303,18 @@ class AgentOverlay(private val service: LifecycleService) {
                         isDragging = false
                         true
                     } else {
-                        isDragging = false
-                        // Let Compose handle the tap via its clickable callbacks
-                        false
+                        // Not a drag — forward as synthetic tap to Compose
+                        forwardingTap = true
+                        val down = MotionEvent.obtain(
+                            event.downTime, event.eventTime,
+                            MotionEvent.ACTION_DOWN,
+                            event.x, event.y, 0
+                        )
+                        v.dispatchTouchEvent(down)
+                        down.recycle()
+                        v.dispatchTouchEvent(event)
+                        forwardingTap = false
+                        true
                     }
                 }
                 else -> false
