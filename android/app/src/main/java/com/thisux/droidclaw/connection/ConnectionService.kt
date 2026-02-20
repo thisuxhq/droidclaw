@@ -147,6 +147,13 @@ class ConnectionService : LifecycleService() {
             webSocket = ws
 
             val router = CommandRouter(ws, captureManager)
+            router.beforeScreenCapture = { overlay?.hideVignette() }
+            router.afterScreenCapture = {
+                if (currentGoalStatus.value == GoalStatus.Running &&
+                    Settings.canDrawOverlays(this@ConnectionService)) {
+                    overlay?.showVignette()
+                }
+            }
             commandRouter = router
 
             launch {
@@ -173,7 +180,24 @@ class ConnectionService : LifecycleService() {
             }
             launch { ws.errorMessage.collect { errorMessage.value = it } }
             launch { router.currentSteps.collect { currentSteps.value = it } }
-            launch { router.currentGoalStatus.collect { currentGoalStatus.value = it } }
+            launch {
+                router.currentGoalStatus.collect { status ->
+                    currentGoalStatus.value = status
+                    if (status == GoalStatus.Running) {
+                        if (Settings.canDrawOverlays(this@ConnectionService)) {
+                            overlay?.showVignette()
+                        }
+                    } else {
+                        overlay?.hideVignette()
+                    }
+                    if (status == GoalStatus.Completed) {
+                        val goal = router.currentGoal.value
+                        if (goal.isNotBlank()) {
+                            (application as DroidClawApp).settingsStore.addRecentGoal(goal)
+                        }
+                    }
+                }
+            }
             launch { router.currentGoal.collect { currentGoal.value = it } }
 
             acquireWakeLock()
@@ -206,6 +230,7 @@ class ConnectionService : LifecycleService() {
     }
 
     private fun disconnect() {
+        overlay?.hideVignette()
         overlay?.hide()
         webSocket?.disconnect()
         webSocket = null

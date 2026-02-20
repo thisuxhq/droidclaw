@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -18,6 +19,7 @@ object SettingsKeys {
     val DEVICE_NAME = stringPreferencesKey("device_name")
     val AUTO_CONNECT = booleanPreferencesKey("auto_connect")
     val HAS_ONBOARDED = booleanPreferencesKey("has_onboarded")
+    val RECENT_GOALS = stringPreferencesKey("recent_goals")
 }
 
 class SettingsStore(private val context: Context) {
@@ -60,5 +62,26 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setHasOnboarded(value: Boolean) {
         context.dataStore.edit { it[SettingsKeys.HAS_ONBOARDED] = value }
+    }
+
+    val recentGoals: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val json = prefs[SettingsKeys.RECENT_GOALS] ?: "[]"
+        try {
+            JSONArray(json).let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun addRecentGoal(goal: String) {
+        context.dataStore.edit { prefs ->
+            val current = try {
+                JSONArray(prefs[SettingsKeys.RECENT_GOALS] ?: "[]").let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }
+                }
+            } catch (_: Exception) { emptyList() }
+            val updated = (listOf(goal) + current.filter { it != goal }).take(5)
+            prefs[SettingsKeys.RECENT_GOALS] = JSONArray(updated).toString()
+        }
     }
 }

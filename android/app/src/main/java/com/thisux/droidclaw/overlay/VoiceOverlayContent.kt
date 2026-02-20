@@ -42,7 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val AccentPurple = Color(0xFF8B5CF6)
+private val AccentCrimson = Color(0xFFC62828)
 private val PanelBackground = Color(0xCC1A1A1A)
 
 @Composable
@@ -118,7 +118,7 @@ fun VoiceOverlayContent(
                     onClick = onSend,
                     enabled = transcript.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentPurple,
+                        containerColor = AccentCrimson,
                         contentColor = Color.White
                     ),
                     modifier = Modifier.weight(1f)
@@ -153,6 +153,6 @@ private fun ListeningIndicator() {
             .size(48.dp)
             .alpha(alpha)
             .clip(CircleShape)
-            .background(AccentPurple)
+            .background(AccentCrimson)
     )
 }

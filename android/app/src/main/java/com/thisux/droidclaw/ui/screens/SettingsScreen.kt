@@ -1,10 +1,12 @@
 package com.thisux.droidclaw.ui.screens
 
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -96,6 +98,14 @@ fun SettingsScreen() {
     var hasOverlayPermission by remember {
         mutableStateOf(Settings.canDrawOverlays(context))
     }
+    var isDefaultAssistant by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val rm = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+                rm.isRoleHeld(RoleManager.ROLE_ASSISTANT)
+            } else false
+        )
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -106,6 +116,10 @@ fun SettingsScreen() {
                 hasCaptureConsent = isCaptureAvailable || ScreenCaptureManager.hasConsent()
                 isBatteryExempt = BatteryOptimization.isIgnoringBatteryOptimizations(context)
                 hasOverlayPermission = Settings.canDrawOverlays(context)
+                isDefaultAssistant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val rm = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+                    rm.isRoleHeld(RoleManager.ROLE_ASSISTANT)
+                } else false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -296,6 +310,17 @@ fun SettingsScreen() {
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${context.packageName}")
                     )
+                )
+            }
+        )
+
+        ChecklistItem(
+            label = "Default digital assistant",
+            isOk = isDefaultAssistant,
+            actionLabel = "Set",
+            onAction = {
+                context.startActivity(
+                    Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
                 )
             }
         )

@@ -12,6 +12,7 @@ import com.thisux.droidclaw.model.PongMessage
 import com.thisux.droidclaw.model.ResultResponse
 import com.thisux.droidclaw.model.ScreenResponse
 import com.thisux.droidclaw.model.ServerMessage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class CommandRouter(
@@ -26,6 +27,10 @@ class CommandRouter(
     val currentSteps = MutableStateFlow<List<AgentStep>>(emptyList())
     val currentGoal = MutableStateFlow("")
     val currentSessionId = MutableStateFlow<String?>(null)
+
+    // Called before/after screen capture to hide/show overlays that would pollute the agent's view
+    var beforeScreenCapture: (() -> Unit)? = null
+    var afterScreenCapture: (() -> Unit)? = null
 
     private var gestureExecutor: GestureExecutor? = null
 
@@ -87,7 +92,7 @@ class CommandRouter(
         }
     }
 
-    private fun handleGetScreen(requestId: String) {
+    private suspend fun handleGetScreen(requestId: String) {
         updateGestureExecutor()
         val svc = DroidClawAccessibilityService.instance
         val elements = svc?.getScreenTree() ?: emptyList()
@@ -97,7 +102,11 @@ class CommandRouter(
 
         var screenshot: String? = null
         if (elements.isEmpty()) {
+            // Hide overlays so the agent gets a clean screenshot
+            beforeScreenCapture?.invoke()
+            delay(150) // wait for virtual display to render a clean frame
             val bytes = captureManager?.capture()
+            afterScreenCapture?.invoke()
             if (bytes != null) {
                 screenshot = Base64.encodeToString(bytes, Base64.NO_WRAP)
             }

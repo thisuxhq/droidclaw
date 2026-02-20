@@ -17,12 +17,16 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.thisux.droidclaw.MainActivity
+import com.thisux.droidclaw.connection.ConnectionService
+import com.thisux.droidclaw.model.GoalStatus
 import com.thisux.droidclaw.model.OverlayMode
 import com.thisux.droidclaw.ui.theme.DroidClawTheme
 
 class AgentOverlay(private val service: LifecycleService) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
+    private val dismissTarget = DismissTargetView(service)
+    private val vignetteOverlay = VignetteOverlay(service)
 
     private val savedStateOwner = object : SavedStateRegistryOwner {
         private val controller = SavedStateRegistryController.create(this)
@@ -49,6 +53,20 @@ class AgentOverlay(private val service: LifecycleService) {
 
     // ── Voice recorder ──────────────────────────────────────
     private var voiceRecorder: VoiceRecorder? = null
+
+    // ── Command panel ───────────────────────────────────────
+    private val commandPanel = CommandPanelOverlay(
+        service = service,
+        onSubmitGoal = { goal ->
+            val intent = Intent(service, ConnectionService::class.java).apply {
+                action = ConnectionService.ACTION_SEND_GOAL
+                putExtra(ConnectionService.EXTRA_GOAL, goal)
+            }
+            service.startService(intent)
+        },
+        onStartVoice = { startListening() },
+        onDismiss = { show() }
+    )
 
     // ── Layout params ───────────────────────────────────────
 
@@ -93,13 +111,20 @@ class AgentOverlay(private val service: LifecycleService) {
     fun hide() {
         hidePill()
         hideVoiceOverlay()
+        dismissTarget.hide()
     }
 
     fun destroy() {
         hide()
+        commandPanel.destroy()
+        vignetteOverlay.destroy()
         voiceRecorder?.stop()
         voiceRecorder = null
     }
+
+    fun showVignette() = vignetteOverlay.show()
+
+    fun hideVignette() = vignetteOverlay.hide()
 
     fun startListening() {
         val recorder = VoiceRecorder(
@@ -237,25 +262,37 @@ class AgentOverlay(private val service: LifecycleService) {
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
                     val dy = (event.rawY - initialTouchY).toInt()
-                    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) isDragging = true
-                    pillParams.x = initialX + dx
-                    pillParams.y = initialY + dy
-                    windowManager.updateViewLayout(view, pillParams)
+                    if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                        isDragging = true
+                        dismissTarget.show()
+                    }
+                    if (isDragging) {
+                        pillParams.x = initialX + dx
+                        pillParams.y = initialY + dy
+                        windowManager.updateViewLayout(view, pillParams)
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        if (mode.value == OverlayMode.Idle) {
-                            startListening()
+                    if (isDragging) {
+                        val dismissed = dismissTarget.isOverTarget(event.rawX, event.rawY)
+                        dismissTarget.hide()
+                        if (dismissed) {
+                            // Reset position to default so next show() starts clean
+                            pillParams.x = 0
+                            pillParams.y = 200
+                            hide()
+                        }
+                    } else {
+                        // Tap: if running, stop goal; otherwise show command panel
+                        if (ConnectionService.currentGoalStatus.value == GoalStatus.Running) {
+                            ConnectionService.instance?.stopGoal()
                         } else {
-                            val intent = Intent(service, MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            }
-                            service.startActivity(intent)
+                            hide()
+                            commandPanel.show()
                         }
                     }
+                    isDragging = false
                     true
                 }
                 else -> false

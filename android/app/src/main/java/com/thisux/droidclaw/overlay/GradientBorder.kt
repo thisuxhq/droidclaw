@@ -19,11 +19,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 private val GradientColors = listOf(
-    Color(0xFF8B5CF6), // purple
-    Color(0xFF3B82F6), // blue
-    Color(0xFF06B6D4), // cyan
-    Color(0xFF10B981), // green
-    Color(0xFF8B5CF6), // purple (loop)
+    Color(0xFFC62828), // crimson red
+    Color(0xFFEF5350), // crimson light
+    Color(0xFFFFB300), // golden accent
+    Color(0xFFEF5350), // crimson light
+    Color(0xFFC62828), // crimson red (loop)
 )
 
 @Composable
