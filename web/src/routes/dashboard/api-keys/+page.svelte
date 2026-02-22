@@ -7,23 +7,6 @@
 
 	let newKeyValue = $state<string | null>(null);
 	let keysPromise = $state(listKeys());
-
-	$effect(() => {
-		if (createKey.result?.key) {
-			newKeyValue = createKey.result.key;
-			keysPromise = listKeys();
-			toast.success('API key created');
-			track(APIKEY_CREATE);
-		}
-	});
-
-	$effect(() => {
-		if (deleteKey.result?.deleted) {
-			keysPromise = listKeys();
-			toast.success('API key deleted');
-			track(APIKEY_DELETE);
-		}
-	});
 </script>
 
 <h2 class="mb-6 text-2xl font-bold">API Keys</h2>
@@ -34,7 +17,16 @@
 		<Icon icon="ph:plus-circle-duotone" class="h-5 w-5 text-neutral-500" />
 		<h3 class="font-semibold">Create New Key</h3>
 	</div>
-	<form {...createKey} class="flex items-end gap-4">
+	<form
+		{...createKey.enhance(async ({ submit }) => {
+			await submit().updates(listKeys());
+			newKeyValue = createKey.result?.key ?? null;
+			keysPromise = listKeys();
+			toast.success('API key created');
+			track(APIKEY_CREATE);
+		})}
+		class="flex items-end gap-4"
+	>
 		<label class="flex flex-1 flex-col gap-1">
 			<span class="text-sm text-neutral-600">Key Name</span>
 			<input
@@ -124,7 +116,14 @@
 								</div>
 							</div>
 						</div>
-						<form {...deleteKey}>
+						<form
+						{...deleteKey.enhance(async ({ submit }) => {
+							await submit().updates(listKeys());
+							keysPromise = listKeys();
+							toast.success('API key deleted');
+							track(APIKEY_DELETE);
+						})}
+					>
 							<input type="hidden" name="keyId" value={key.id} />
 							<button
 								type="submit"
