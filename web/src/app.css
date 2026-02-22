@@ -6,6 +6,10 @@
 	--font-sans: 'Google Sans', 'Google Sans Text', system-ui, -apple-system, sans-serif;
 }
 
+body {
+	background-color: var(--color-stone-100);
+}
+
 a, button, [role="button"], input[type="submit"], select, summary {
 	cursor: pointer;
 }

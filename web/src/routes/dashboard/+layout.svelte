@@ -10,10 +10,10 @@
 	let { children, data } = $props();
 
 	const navItems = [
-		{ href: '/dashboard', label: 'Overview', icon: 'ph:squares-four-duotone', exact: true },
-		{ href: '/dashboard/devices', label: 'Devices', icon: 'ph:device-mobile-duotone' },
-		{ href: '/dashboard/api-keys', label: 'API Keys', icon: 'ph:key-duotone' },
-		{ href: '/dashboard/settings', label: 'Settings', icon: 'ph:gear-duotone' }
+		{ href: '/dashboard', label: 'Overview', icon: 'solar:home-2-bold-duotone', exact: true, color: 'bg-blue-100 text-blue-600' },
+		{ href: '/dashboard/devices', label: 'Devices', icon: 'solar:smartphone-bold-duotone', color: 'bg-emerald-100 text-emerald-600' },
+		{ href: '/dashboard/api-keys', label: 'API Keys', icon: 'solar:key-bold-duotone', color: 'bg-amber-100 text-amber-600' },
+		{ href: '/dashboard/settings', label: 'Settings', icon: 'solar:settings-bold-duotone', color: 'bg-purple-100 text-purple-600' }
 	];
 
 	function isActive(href: string, exact: boolean = false) {
@@ -30,25 +30,24 @@
 </script>
 
 <div class="flex min-h-screen">
-	<aside class="flex w-64 flex-col border-r border-neutral-200 bg-neutral-50 p-6">
+	<aside class="flex w-64 flex-col bg-stone-100 p-6">
 		<div class="mb-8">
 			<h1 class="text-lg font-bold tracking-tight">DroidClaw</h1>
 		</div>
-		<nav class="flex flex-col gap-1">
+		<nav class="flex flex-col gap-1.5">
 			{#each navItems as item}
 				<a
 					href={item.href}
 					data-umami-event={NAV_SIDEBAR_CLICK}
 					data-umami-event-section={item.label.toLowerCase().replace(' ', '-')}
-					class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+					class="flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-colors
 						{isActive(item.href, item.exact)
-						? 'bg-neutral-200/70 text-neutral-900'
-						: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700'}"
+						? 'bg-white text-stone-900'
+						: 'text-stone-600 hover:bg-white/60'}"
 				>
-					<Icon
-						icon={item.icon}
-						class="h-5 w-5 {isActive(item.href, item.exact) ? 'text-neutral-700' : 'text-neutral-400'}"
-					/>
+					<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full {item.color}">
+						<Icon icon={item.icon} class="h-[18px] w-[18px]" />
+					</div>
 					{item.label}
 				</a>
 			{/each}
@@ -64,9 +63,11 @@
 				<button
 					type="submit"
 					data-umami-event={AUTH_SIGNOUT}
-					class="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+					class="mt-1 flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-600"
 				>
-					<Icon icon="ph:sign-out-duotone" class="h-5 w-5" />
+					<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+						<Icon icon="solar:logout-2-bold-duotone" class="h-[18px] w-[18px]" />
+					</div>
 					Sign out
 				</button>
 			</form>

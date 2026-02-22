@@ -95,33 +95,33 @@
 <h2 class="mb-6 text-2xl font-bold">Devices</h2>
 
 {#if devices.length === 0}
-	<div class="rounded-xl border border-neutral-200 p-10 text-center">
-		<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100">
-			<Icon icon="ph:device-mobile-slash-duotone" class="h-6 w-6 text-neutral-400" />
+	<div class="rounded-2xl bg-white p-10 text-center">
+		<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
+			<Icon icon="solar:smartphone-bold-duotone" class="h-6 w-6 text-stone-400" />
 		</div>
-		<p class="font-medium text-neutral-600">No devices connected</p>
-		<p class="mt-1 text-sm text-neutral-400">
+		<p class="font-medium text-stone-600">No devices connected</p>
+		<p class="mt-1 text-sm text-stone-400">
 			Install the Android app, paste your API key, and your device will appear here.
 		</p>
-		<div class="mt-4 flex flex-col items-center gap-3">
+		<div class="mt-5 flex flex-col items-center gap-3">
 			<a
 				href="https://github.com/unitedbyai/droidclaw/releases/download/v0.3.1/app-debug.apk"
-				class="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+				class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
 			>
-				<Icon icon="ph:android-logo-duotone" class="h-4 w-4" />
+				<Icon icon="solar:download-bold-duotone" class="h-4 w-4" />
 				Download APK
 			</a>
 			<a
 				href="/dashboard/api-keys"
-				class="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 hover:text-neutral-700"
+				class="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 hover:text-stone-700"
 			>
-				<Icon icon="ph:key-duotone" class="h-4 w-4" />
+				<Icon icon="solar:key-bold-duotone" class="h-4 w-4" />
 				Create an API key
 			</a>
 		</div>
 	</div>
 {:else}
-	<div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each devices as d (d.deviceId)}
 			<DeviceCard {...d} />
 		{/each}
