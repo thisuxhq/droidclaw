@@ -225,22 +225,38 @@ class GestureExecutor(private val service: DroidClawAccessibilityService) {
         val intentAction = msg.intentAction
             ?: return ActionResult(false, "No intentAction provided")
 
+        val extras = msg.intentExtras
+        var parsedUri = msg.intentUri?.let { Uri.parse(it) }
+
+        // For mailto: URIs, encode subject and body into the URI query params
+        // because many email apps ignore intent extras with SENDTO+mailto
+        if (parsedUri?.scheme == "mailto" && !extras.isNullOrEmpty()) {
+            val subject = extras["android.intent.extra.SUBJECT"]
+            val body = extras["android.intent.extra.TEXT"]
+            val baseEmail = parsedUri.schemeSpecificPart.split("?")[0]
+            val params = mutableListOf<String>()
+            if (!subject.isNullOrEmpty()) params.add("subject=${Uri.encode(subject)}")
+            if (!body.isNullOrEmpty()) params.add("body=${Uri.encode(body)}")
+            if (params.isNotEmpty()) {
+                parsedUri = Uri.parse("mailto:$baseEmail?${params.joinToString("&")}")
+            }
+        }
+
         val intent = Intent(intentAction).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            val uri = msg.intentUri?.let { Uri.parse(it) }
             val mimeType = msg.intentType
 
             when {
-                uri != null && mimeType != null -> setDataAndType(uri, mimeType)
-                uri != null -> data = uri
+                parsedUri != null && mimeType != null -> setDataAndType(parsedUri, mimeType)
+                parsedUri != null -> data = parsedUri
                 mimeType != null -> type = mimeType
             }
 
             msg.packageName?.let { setPackage(it) }
 
             // Auto-detect numeric extras (needed for SET_ALARM HOUR/MINUTES etc.)
-            msg.intentExtras?.forEach { (k, v) ->
+            extras?.forEach { (k, v) ->
                 val intVal = v.toIntOrNull()
                 val longVal = v.toLongOrNull()
                 when {
