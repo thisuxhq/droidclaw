@@ -252,7 +252,7 @@
 				Pair Device
 			</button>
 			<a
-				href="https://github.com/unitedbyai/droidclaw/releases/download/v0.3.1/app-debug.apk"
+				href="https://github.com/unitedbyai/droidclaw/releases/download/v0.4.0/app-debug.apk"
 				class="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 hover:text-stone-700"
 			>
 				<Icon icon="solar:download-bold-duotone" class="h-4 w-4" />
