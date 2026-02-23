@@ -86,6 +86,13 @@ goals.post("/", async (c) => {
 
   const abort = new AbortController();
 
+  /** Send a JSON message to the device WebSocket (if still connected) */
+  const sendToDevice = (msg: Record<string, unknown>) => {
+    const d = sessions.getDevice(device.deviceId) ?? sessions.getDeviceByPersistentId(device.persistentDeviceId ?? "");
+    if (!d) return;
+    try { d.ws.send(JSON.stringify(msg)); } catch { /* disconnected */ }
+  };
+
   const pipelineOpts: PipelineOptions = {
     deviceId: device.deviceId,
     persistentDeviceId: device.persistentDeviceId,
@@ -94,10 +101,28 @@ goals.post("/", async (c) => {
     llmConfig: llmCfg,
     maxSteps: body.maxSteps,
     signal: abort.signal,
+    onStep(step) {
+      sendToDevice({
+        type: "step",
+        step: step.stepNumber,
+        action: step.action,
+        reasoning: step.reasoning,
+      });
+    },
+    onComplete(result) {
+      sendToDevice({
+        type: "goal_completed",
+        success: result.success,
+        stepsUsed: result.stepsUsed,
+      });
+    },
   };
 
   const sessionPlaceholder = { sessionId: "pending", goal: body.goal, abort };
   activeSessions.set(trackingKey, sessionPlaceholder);
+
+  // Notify device that goal has started
+  sendToDevice({ type: "goal_started", goal: body.goal });
 
   const loopPromise = runPipeline(pipelineOpts);
 
@@ -110,6 +135,7 @@ goals.post("/", async (c) => {
     })
     .catch((err) => {
       activeSessions.delete(trackingKey);
+      sendToDevice({ type: "goal_failed", message: String(err) });
       console.error(`[Pipeline] Error on ${device.deviceId}: ${err}`);
     });
 
