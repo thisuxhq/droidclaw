@@ -53,9 +53,10 @@ fi
 # Update APK download links in devices page and README
 DEVICES_PAGE="web/src/routes/dashboard/devices/+page.svelte"
 README="README.md"
+SITE="site/index.html"
 CHANGED=false
 
-for FILE in "$DEVICES_PAGE" "$README"; do
+for FILE in "$DEVICES_PAGE" "$README" "$SITE"; do
   if grep -q "releases/download/" "$FILE" 2>/dev/null; then
     sed -i '' "s|releases/download/[^/]*/app-debug.apk|releases/download/$VERSION/app-debug.apk|g" "$FILE"
     # Also update version label in README (e.g., "APK (v0.3.1)" → "APK (v0.4.0)")
