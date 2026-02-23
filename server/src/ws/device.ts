@@ -369,21 +369,15 @@ export async function handleDeviceMessage(
 
     case "voice_start": {
       const deviceId = ws.data.deviceId!;
-      const userId = ws.data.userId!;
+      const voiceKey = process.env.GROQ_VOICE_API_KEY;
 
-      // Fetch user's LLM config to get API key for Groq Whisper
-      const configs = await db
-        .select()
-        .from(llmConfig)
-        .where(eq(llmConfig.userId, userId))
-        .limit(1);
-
-      if (configs.length === 0 || !configs[0].apiKey) {
+      if (!voiceKey) {
+        console.error("[Voice] GROQ_VOICE_API_KEY not configured");
         sendToDevice(ws, { type: "transcript_final", text: "" });
         break;
       }
 
-      handleVoiceStart(ws, deviceId, configs[0].apiKey);
+      handleVoiceStart(ws, deviceId, voiceKey);
       break;
     }
 
@@ -403,21 +397,16 @@ export async function handleDeviceMessage(
         break;
       }
 
-      // action === "send" — finalize and fire goal
-      const configs = await db
-        .select()
-        .from(llmConfig)
-        .where(eq(llmConfig.userId, userId))
-        .limit(1);
-
-      if (configs.length === 0 || !configs[0].apiKey) {
+      // action === "send" — finalize transcription with server-managed Groq key
+      const voiceKey = process.env.GROQ_VOICE_API_KEY;
+      if (!voiceKey) {
+        console.error("[Voice] GROQ_VOICE_API_KEY not configured");
         handleVoiceCancel(deviceId);
         sendToDevice(ws, { type: "transcript_final", text: "" });
         break;
       }
 
-      const groqKey = configs[0].apiKey;
-      const transcript = await handleVoiceSend(ws, deviceId, groqKey);
+      const transcript = await handleVoiceSend(ws, deviceId, voiceKey);
 
       if (transcript) {
         const persistentDeviceId = ws.data.persistentDeviceId!;
@@ -427,11 +416,30 @@ export async function handleDeviceMessage(
           break;
         }
 
-        const userLlmConfig: LLMConfig = {
-          provider: configs[0].provider,
-          apiKey: configs[0].apiKey,
-          model: configs[0].model ?? undefined,
-        };
+        // Fetch user's LLM config for goal execution (separate from voice)
+        let userLlmConfig: LLMConfig;
+        try {
+          const configs = await db
+            .select()
+            .from(llmConfig)
+            .where(eq(llmConfig.userId, userId))
+            .limit(1);
+
+          if (configs.length === 0) {
+            sendToDevice(ws, { type: "goal_failed", message: "No LLM provider configured. Set it up in the web dashboard Settings." });
+            break;
+          }
+
+          userLlmConfig = {
+            provider: configs[0].provider,
+            apiKey: configs[0].apiKey,
+            model: configs[0].model ?? undefined,
+          };
+        } catch (err) {
+          console.error(`[Agent] Failed to fetch LLM config for user ${userId}:`, err);
+          sendToDevice(ws, { type: "goal_failed", message: "Failed to load LLM configuration" });
+          break;
+        }
 
         console.log(`[Pipeline] Starting voice goal for device ${deviceId}: ${transcript}`);
         const abortController = new AbortController();
