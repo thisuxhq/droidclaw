@@ -208,13 +208,22 @@
 <!-- Page header -->
 <div class="mb-6 flex items-center justify-between">
 	<h2 class="text-xl md:text-2xl font-bold">Devices</h2>
-	<button
-		onclick={openPairingModal}
-		class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
-	>
-		<Icon icon="solar:link-round-bold-duotone" class="h-4 w-4" />
-		Pair Device
-	</button>
+	<div class="flex items-center gap-2">
+		<a
+			href="https://github.com/unitedbyai/droidclaw/releases/download/v0.4.0/app-debug.apk"
+			class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
+		>
+			<Icon icon="solar:download-bold-duotone" class="h-4 w-4" />
+			Download APK
+		</a>
+		<button
+			onclick={openPairingModal}
+			class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
+		>
+			<Icon icon="solar:link-round-bold-duotone" class="h-4 w-4" />
+			Pair Device
+		</button>
+	</div>
 </div>
 
 <!-- LLM not configured banner -->
@@ -243,22 +252,13 @@
 		<p class="mt-1 text-sm text-stone-400">
 			Install the Android app and pair your device to get started.
 		</p>
-		<div class="mt-5 flex flex-col items-center gap-3">
-			<button
-				onclick={openPairingModal}
-				class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
-			>
-				<Icon icon="solar:link-round-bold-duotone" class="h-4 w-4" />
-				Pair Device
-			</button>
-			<a
-				href="https://github.com/unitedbyai/droidclaw/releases/download/v0.4.0/app-debug.apk"
-				class="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 hover:text-stone-700"
-			>
-				<Icon icon="solar:download-bold-duotone" class="h-4 w-4" />
-				Download APK
-			</a>
-		</div>
+		<button
+			onclick={openPairingModal}
+			class="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
+		>
+			<Icon icon="solar:link-round-bold-duotone" class="h-4 w-4" />
+			Pair Device
+		</button>
 	</div>
 {:else}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
