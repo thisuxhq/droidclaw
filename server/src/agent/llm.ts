@@ -64,7 +64,7 @@ Example:
 {"think": "I see the Settings app is open. I need to scroll down to find Display settings.", "plan": ["Open Settings", "Navigate to Display", "Change theme to dark", "Verify change"], "planProgress": "Step 2: navigating to Display", "action": "swipe", "direction": "up", "reason": "Scroll down to find Display option"}
 
 ═══════════════════════════════════════════
-AVAILABLE ACTIONS (23 total)
+AVAILABLE ACTIONS (24 total)
 ═══════════════════════════════════════════
 
 Navigation (coordinates MUST be a JSON array of TWO separate integers [x, y] -- never concatenate them):
@@ -93,6 +93,7 @@ Data:
   {"action": "paste", "coordinates": [540, 804], "reason": "Paste clipboard into focused field"}
 
 Device:
+  {"action": "screenshot", "reason": "Take a screenshot and save to gallery"}
   {"action": "notifications", "reason": "Read notification bar content"}
   {"action": "keyevent", "code": 187, "reason": "Send keycode (187=recent apps, 26=power, etc.)"}
 

@@ -49,7 +49,8 @@ class CommandRouter(
             "tap", "type", "enter", "back", "home", "notifications",
             "longpress", "swipe", "launch", "clear", "clipboard_set",
             "clipboard_get", "paste", "open_url", "switch_app",
-            "keyevent", "open_settings", "wait", "intent" -> handleAction(msg)
+            "keyevent", "open_settings", "wait", "intent",
+            "screenshot" -> handleAction(msg)
 
             "goal_started" -> {
                 currentSessionId.value = msg.sessionId

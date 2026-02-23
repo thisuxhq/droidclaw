@@ -49,6 +49,7 @@ class GestureExecutor(private val service: DroidClawAccessibilityService) {
                 "open_settings" -> executeOpenSettings(msg.setting)
                 "wait" -> executeWait(msg.duration ?: 1000)
                 "intent" -> executeIntent(msg)
+                "screenshot" -> executeScreenshot()
                 else -> ActionResult(false, "Unknown action: ${msg.type}")
             }
         } catch (e: Exception) {
@@ -284,6 +285,16 @@ class GestureExecutor(private val service: DroidClawAccessibilityService) {
             ActionResult(true)
         } catch (e: Exception) {
             ActionResult(false, "Settings intent failed: ${e.message}")
+        }
+    }
+
+    private fun executeScreenshot(): ActionResult {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            val success = service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+            if (success) ActionResult(true, data = "Screenshot saved to gallery")
+            else ActionResult(false, "Screenshot global action failed")
+        } else {
+            ActionResult(false, "Screenshot requires Android 9+")
         }
     }
 
