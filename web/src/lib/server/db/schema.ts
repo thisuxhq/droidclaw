@@ -104,6 +104,16 @@ export const llmConfig = pgTable('llm_config', {
 		.notNull()
 });
 
+export const pairingCode = pgTable('pairing_code', {
+	id: text('id').primaryKey(),
+	code: text('code').notNull().unique(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	expiresAt: timestamp('expires_at').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export const device = pgTable('device', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
