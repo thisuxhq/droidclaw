@@ -11,6 +11,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -77,6 +79,7 @@ fun SettingsScreen() {
 
     val apiKey by app.settingsStore.apiKey.collectAsState(initial = "")
     val serverUrl by app.settingsStore.serverUrl.collectAsState(initial = "wss://tunnel.droidclaw.ai")
+    val connectionMode by app.settingsStore.connectionMode.collectAsState(initial = "cloud")
 
     var editingApiKey by remember { mutableStateOf<String?>(null) }
     val displayApiKey = editingApiKey ?: apiKey
@@ -147,48 +150,89 @@ fun SettingsScreen() {
         // --- Server Section ---
         SectionHeader("Server")
 
-        OutlinedTextField(
-            value = displayApiKey,
-            onValueChange = { editingApiKey = it },
-            label = { Text("API Key") },
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
-        if (editingApiKey != null && editingApiKey != apiKey) {
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        app.settingsStore.setApiKey(displayApiKey)
-                        editingApiKey = null
-                    }
-                },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Save API Key")
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            scope.launch { app.settingsStore.setConnectionMode("cloud") }
+                        }
+                ) {
+                    RadioButton(
+                        selected = connectionMode == "cloud",
+                        onClick = { scope.launch { app.settingsStore.setConnectionMode("cloud") } }
+                    )
+                    Text("DroidClaw Cloud", style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            scope.launch { app.settingsStore.setConnectionMode("selfhosted") }
+                        }
+                ) {
+                    RadioButton(
+                        selected = connectionMode == "selfhosted",
+                        onClick = { scope.launch { app.settingsStore.setConnectionMode("selfhosted") } }
+                    )
+                    Text("Self-hosted", style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
 
-        OutlinedTextField(
-            value = displayServerUrl,
-            onValueChange = { editingServerUrl = it },
-            label = { Text("Server URL") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
-        if (editingServerUrl != null && editingServerUrl != serverUrl) {
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        app.settingsStore.setServerUrl(displayServerUrl)
-                        editingServerUrl = null
-                    }
-                },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Save Server URL")
+        if (connectionMode == "selfhosted") {
+            OutlinedTextField(
+                value = displayServerUrl,
+                onValueChange = { editingServerUrl = it },
+                label = { Text("WebSocket URL") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+            if (editingServerUrl != null && editingServerUrl != serverUrl) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            app.settingsStore.setServerUrl(displayServerUrl)
+                            editingServerUrl = null
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Save URL")
+                }
+            }
+
+            OutlinedTextField(
+                value = displayApiKey,
+                onValueChange = { editingApiKey = it },
+                label = { Text("API Key") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+            if (editingApiKey != null && editingApiKey != apiKey) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            app.settingsStore.setApiKey(displayApiKey)
+                            editingApiKey = null
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Save API Key")
+                }
             }
         }
 

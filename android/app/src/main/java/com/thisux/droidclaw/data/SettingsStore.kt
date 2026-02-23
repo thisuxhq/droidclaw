@@ -20,6 +20,7 @@ object SettingsKeys {
     val AUTO_CONNECT = booleanPreferencesKey("auto_connect")
     val HAS_ONBOARDED = booleanPreferencesKey("has_onboarded")
     val RECENT_GOALS = stringPreferencesKey("recent_goals")
+    val CONNECTION_MODE = stringPreferencesKey("connection_mode") // "cloud" or "selfhosted"
 }
 
 class SettingsStore(private val context: Context) {
@@ -54,6 +55,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setAutoConnect(value: Boolean) {
         context.dataStore.edit { it[SettingsKeys.AUTO_CONNECT] = value }
+    }
+
+    val connectionMode: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[SettingsKeys.CONNECTION_MODE] ?: "cloud"
+    }
+
+    suspend fun setConnectionMode(value: String) {
+        context.dataStore.edit { it[SettingsKeys.CONNECTION_MODE] = value }
     }
 
     val hasOnboarded: Flow<Boolean> = context.dataStore.data.map { prefs ->
