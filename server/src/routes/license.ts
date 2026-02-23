@@ -36,7 +36,7 @@ license.post("/activate", async (c) => {
     .limit(1);
 
   if (existing[0]?.plan) {
-    return c.json({ error: "Account already activated" }, 400);
+    return c.json({ success: true, plan: existing[0].plan, alreadyActive: true });
   }
 
   try {
@@ -115,7 +115,7 @@ license.post("/activate-checkout", async (c) => {
     .limit(1);
 
   if (existing[0]?.plan) {
-    return c.json({ error: "Account already activated" }, 400);
+    return c.json({ success: true, plan: existing[0].plan, alreadyActive: true });
   }
 
   try {
