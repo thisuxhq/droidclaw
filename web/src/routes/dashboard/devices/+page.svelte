@@ -210,7 +210,7 @@
 	<h2 class="text-xl md:text-2xl font-bold">Devices</h2>
 	<div class="flex items-center gap-2">
 		<a
-			href="https://github.com/unitedbyai/droidclaw/releases/download/v0.5.0/app-debug.apk"
+			href="https://github.com/unitedbyai/droidclaw/releases/download/v0.5.1/app-debug.apk"
 			class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
 		>
 			<Icon icon="solar:download-bold-duotone" class="h-4 w-4" />
