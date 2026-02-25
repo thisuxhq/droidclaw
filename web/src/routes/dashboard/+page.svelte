@@ -53,7 +53,7 @@
 		{
 			label: 'Install the Android app',
 			desc: 'Download and install DroidClaw on your phone',
-			href: 'https://github.com/nicepkg/droidclaw/releases/latest',
+			href: 'https://github.com/unitedbyai/droidclaw/releases/latest',
 			done: hasDevice
 		},
 		{
