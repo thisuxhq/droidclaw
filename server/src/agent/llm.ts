@@ -239,6 +239,14 @@ The app field is the package name to launch first. The subGoal is what the UI ag
 Option C — DONE: The goal is nonsensical or impossible.
 Return: {"type":"done","reason":"..."}
 
+Option D — SCHEDULED: The goal contains a time delay or future time reference (e.g. "after 5 minutes", "tomorrow at 9am", "in 2 hours").
+Return: {"type":"scheduled","delay":<seconds from now>,"goal":"<the goal with the time reference removed>"}
+Examples:
+- "send email after 5 minutes" → {"type":"scheduled","delay":300,"goal":"send email"}
+- "open YouTube in 2 hours" → {"type":"scheduled","delay":7200,"goal":"open YouTube"}
+- "remind me to call at 3pm" → {"type":"scheduled","delay":<seconds until 3pm>,"goal":"remind me to call"}
+If the goal has NO time reference, do NOT return scheduled — use Option A, B, or C instead.
+
 Respond with ONLY a valid JSON object. No explanation.`;
 
   const user = `GOAL: ${goal}

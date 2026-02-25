@@ -98,6 +98,16 @@ export async function classifyGoal(
       };
     }
 
+    case "scheduled": {
+      const delay = typeof parsed.delay === "number" ? parsed.delay : parseInt(String(parsed.delay));
+      const cleanGoal = typeof parsed.goal === "string" ? parsed.goal : goal;
+      if (!delay || delay <= 0 || isNaN(delay)) {
+        console.warn("[Classifier] Scheduled result with invalid delay, falling through");
+        return { stage: "classifier", type: "passthrough" };
+      }
+      return { stage: "classifier", type: "scheduled", delay, goal: cleanGoal };
+    }
+
     default:
       console.warn(`[Classifier] Unknown type: ${parsed.type}`);
       return { stage: "classifier", type: "passthrough" };
