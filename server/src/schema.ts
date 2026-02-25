@@ -139,6 +139,10 @@ export const agentSession = pgTable("agent_session", {
   stepsUsed: integer("steps_used").default(0),
   startedAt: timestamp("started_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
+  // Scheduling (QStash)
+  qstashMessageId: text("qstash_message_id"),
+  scheduledFor: timestamp("scheduled_for"),
+  scheduledDelay: integer("scheduled_delay"),
 });
 
 export const agentStep = pgTable("agent_step", {

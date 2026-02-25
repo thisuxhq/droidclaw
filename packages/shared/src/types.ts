@@ -59,6 +59,7 @@ export type PipelineResult =
   | { stage: "parser"; type: "open_settings"; setting: string }
   | { stage: "classifier"; type: "ui"; app: string; subGoal: string }
   | { stage: "parser" | "classifier"; type: "done"; reason: string }
+  | { stage: "classifier"; type: "scheduled"; delay: number; goal: string }
   | { stage: "parser" | "classifier"; type: "passthrough" };
 
 export interface IntentCommand {
