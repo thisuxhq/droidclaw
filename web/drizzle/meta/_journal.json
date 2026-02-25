@@ -36,6 +36,13 @@
       "when": 1771848843517,
       "tag": "0004_cloudy_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772028113393,
+      "tag": "0005_brave_lionheart",
+      "breakpoints": true
     }
   ]
 }
