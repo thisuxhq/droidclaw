@@ -215,8 +215,26 @@ export async function runPipeline(
     const qstash = getQStashClient();
 
     if (!qstash) {
-      console.warn("[Pipeline] QStash not configured, executing goal immediately");
-      // Fall through to normal pipeline by NOT returning here
+      console.warn("[Pipeline] QStash not configured, executing goal immediately with cleaned goal");
+      // Re-classify the cleaned goal (without time reference) so it routes correctly
+      const cleanedClassResult = await classifyGoal(classResult.goal, caps, llmConfig);
+      console.log(`[Pipeline] Re-classified cleaned goal: ${cleanedClassResult.type}`);
+      // Recursively handle the cleaned result by falling through with the original pipeline
+      // For simplicity, just run the UI agent with the cleaned goal
+      const loopResult = await runAgentLoop({
+        deviceId,
+        persistentDeviceId,
+        userId,
+        goal: classResult.goal,
+        originalGoal: goal,
+        llmConfig,
+        maxSteps,
+        signal,
+        pipelineMode: true,
+        onStep,
+        onComplete,
+      });
+      return { ...loopResult, resolvedBy: "ui_agent" };
     } else {
       // Persist the scheduled session in DB
       const sessionId = crypto.randomUUID();

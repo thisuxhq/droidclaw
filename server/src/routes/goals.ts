@@ -206,29 +206,32 @@ goals.post("/execute", async (c) => {
 
   const { sessionId, deviceId, userId, goal } = payload;
 
-  // Update session status to running
+  // Check if session was cancelled before QStash fired
+  const [existing] = await db
+    .select({ status: agentSession.status })
+    .from(agentSession)
+    .where(eq(agentSession.id, sessionId))
+    .limit(1);
+
+  if (!existing) {
+    return c.json({ error: "Session not found" }, 200); // 200 so QStash doesn't retry
+  }
+  if (existing.status === "cancelled") {
+    return c.json({ status: "cancelled" }, 200);
+  }
+
+  // Check device is online (don't mark failed yet — let QStash retry)
+  const device = sessions.getDeviceByPersistentId(deviceId);
+  if (!device) {
+    // Return 500 so QStash retries — keep status as "scheduled"
+    return c.json({ error: "Device not connected" }, 500);
+  }
+
+  // Device is online — update session status to running
   await db
     .update(agentSession)
     .set({ status: "running", startedAt: new Date() })
     .where(eq(agentSession.id, sessionId));
-
-  // Check device is online
-  const device = sessions.getDeviceByPersistentId(deviceId);
-  if (!device) {
-    await db
-      .update(agentSession)
-      .set({ status: "failed", completedAt: new Date() })
-      .where(eq(agentSession.id, sessionId));
-
-    sessions.notifyDashboard(userId, {
-      type: "goal_failed",
-      sessionId,
-      message: "Device offline when scheduled goal fired",
-    });
-
-    // Return 500 so QStash retries
-    return c.json({ error: "Device not connected" }, 500);
-  }
 
   // Fetch LLM config
   const configs = await db
