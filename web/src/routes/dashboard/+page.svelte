@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { DASHBOARD_CARD_CLICK } from '$lib/analytics/events';
-	import { listKeys } from '$lib/api/api-keys.remote';
 	import { getConfig } from '$lib/api/settings.remote';
 	import { listDevices } from '$lib/api/devices.remote';
 
@@ -32,18 +31,11 @@
 	];
 
 	// Setup checklist data
-	const [keys, config, devices] = await Promise.all([listKeys(), getConfig(), listDevices()]);
-	const hasKeys = (keys as unknown[]).length > 0;
+	const [config, devices] = await Promise.all([getConfig(), listDevices()]);
 	const hasConfig = config !== null;
 	const hasDevice = (devices as unknown[]).length > 0;
 
 	const checklist = [
-		{
-			label: 'Create an API key',
-			desc: 'Required for device authentication',
-			href: '/dashboard/api-keys',
-			done: hasKeys
-		},
 		{
 			label: 'Configure LLM provider',
 			desc: 'Choose your AI model and add credentials',
@@ -59,7 +51,7 @@
 		{
 			label: 'Connect your device',
 			desc: 'Pair your phone with the dashboard',
-			href: '/dashboard/devices',
+			href: '/dashboard/devices?pair',
 			done: hasDevice
 		}
 	];
@@ -87,7 +79,7 @@
 
 {#if !allComplete}
 	<div class="mb-6">
-		<p class="mb-3 text-sm font-medium text-stone-500">{completedCount} of 4 complete</p>
+		<p class="mb-3 text-sm font-medium text-stone-500">{completedCount} of {checklist.length} complete</p>
 		<div class="rounded-2xl bg-white">
 			{#each checklist as step, i}
 				<a

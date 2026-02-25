@@ -151,6 +151,14 @@
 
 	// ─── WebSocket subscriptions ───────────────────────────────
 	onMount(() => {
+		// Auto-open pairing modal if ?pair query param is present
+		const params = new URLSearchParams(window.location.search);
+		if (params.has('pair')) {
+			openPairingModal();
+			// Clean up the URL
+			history.replaceState({}, '', window.location.pathname);
+		}
+
 		const unsub = dashboardWs.subscribe((msg) => {
 			if (msg.type === 'device_online') {
 				const id = msg.deviceId as string;
