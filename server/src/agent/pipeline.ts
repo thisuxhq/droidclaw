@@ -210,6 +210,67 @@ export async function runPipeline(
   const classResult = await classifyGoal(goal, caps, llmConfig);
   console.log(`[Pipeline] Stage 2 (Classifier): ${classResult.type}`);
 
+  if (classResult.type === "scheduled") {
+    const { getQStashClient, getCallbackUrl } = await import("../qstash.js");
+    const qstash = getQStashClient();
+
+    if (!qstash) {
+      console.warn("[Pipeline] QStash not configured, executing goal immediately");
+      // Fall through to normal pipeline by NOT returning here
+    } else {
+      // Persist the scheduled session in DB
+      const sessionId = crypto.randomUUID();
+      const scheduledFor = new Date(Date.now() + classResult.delay * 1000);
+
+      if (persistentDeviceId) {
+        await db.insert(agentSession).values({
+          id: sessionId,
+          userId,
+          deviceId: persistentDeviceId,
+          goal: classResult.goal,
+          status: "scheduled",
+          stepsUsed: 0,
+          qstashMessageId: null,
+          scheduledFor,
+          scheduledDelay: classResult.delay,
+        });
+      }
+
+      // Publish to QStash with delay
+      const result = await qstash.publishJSON({
+        url: getCallbackUrl(),
+        body: {
+          sessionId,
+          deviceId: persistentDeviceId ?? deviceId,
+          userId,
+          goal: classResult.goal,
+        },
+        delay: classResult.delay,
+      });
+
+      // Store the QStash message ID for cancellation
+      if (persistentDeviceId && result.messageId) {
+        await db
+          .update(agentSession)
+          .set({ qstashMessageId: result.messageId })
+          .where(eq(agentSession.id, sessionId));
+      }
+
+      // Notify dashboard
+      sessions.notifyDashboard(userId, {
+        type: "goal_scheduled",
+        sessionId,
+        goal: classResult.goal,
+        scheduledFor: scheduledFor.toISOString(),
+        delay: classResult.delay,
+      });
+
+      onComplete?.({ success: true, stepsUsed: 0, sessionId });
+      console.log(`[Pipeline] Goal scheduled via QStash: "${classResult.goal}" in ${classResult.delay}s`);
+      return { success: true, stepsUsed: 0, sessionId, resolvedBy: "classifier" };
+    }
+  }
+
   if (classResult.type === "done") {
     const sessionId = persistentDeviceId
       ? await persistQuickSession(userId, persistentDeviceId, goal, "classifier", { done: true, reason: classResult.reason })
