@@ -274,7 +274,7 @@ export async function runPipeline(
           .where(eq(agentSession.id, sessionId));
       }
 
-      // Notify dashboard
+      // Notify dashboard (web)
       sessions.notifyDashboard(userId, {
         type: "goal_scheduled",
         sessionId,
@@ -283,7 +283,21 @@ export async function runPipeline(
         delay: classResult.delay,
       });
 
-      onComplete?.({ success: true, stepsUsed: 0, sessionId });
+      // Notify device — send goal_scheduled, NOT goal_completed
+      const device = sessions.getDevice(deviceId);
+      if (device) {
+        try {
+          device.ws.send(JSON.stringify({
+            type: "goal_scheduled",
+            goal: classResult.goal,
+            scheduledFor: scheduledFor.toISOString(),
+            delay: classResult.delay,
+          }));
+        } catch { /* disconnected */ }
+      }
+
+      // NOTE: Do NOT call onComplete here — that sends goal_completed to the device,
+      // which would make the app show "completed" before execution actually happens.
       console.log(`[Pipeline] Goal scheduled via QStash: "${classResult.goal}" in ${classResult.delay}s`);
       return { success: true, stepsUsed: 0, sessionId, resolvedBy: "classifier" };
     }

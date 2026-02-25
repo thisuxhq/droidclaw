@@ -50,4 +50,6 @@ export type DashboardMessage =
   | { type: "step"; sessionId: string; step: number; action: Record<string, unknown>; reasoning: string; screenHash: string }
   | { type: "goal_started"; sessionId: string; goal: string; deviceId: string }
   | { type: "goal_completed"; sessionId: string; success: boolean; stepsUsed: number }
+  | { type: "goal_scheduled"; sessionId: string; goal: string; scheduledFor: string; delay: number }
+  | { type: "goal_cancelled"; sessionId: string }
   | { type: "device_status"; deviceId: string; batteryLevel: number; isCharging: boolean };
