@@ -115,25 +115,23 @@
 			<p class="truncate text-xs text-stone-500">{lastGoal.goal}</p>
 			<div class="mt-1 flex items-center justify-between">
 				<span
-					class="flex items-center gap-1 text-xs font-medium {lastGoal.status === 'completed'
-						? 'text-emerald-600'
-						: lastGoal.status === 'running'
-							? 'text-amber-600'
-							: 'text-red-500'}"
+					class="flex items-center gap-1 text-xs font-medium
+						{lastGoal.status === 'completed' ? 'text-emerald-600'
+						: lastGoal.status === 'running' ? 'text-amber-600'
+						: lastGoal.status === 'scheduled' ? 'text-blue-600'
+						: 'text-red-500'}"
 				>
 					<Icon
-						icon={lastGoal.status === 'completed'
-							? 'solar:check-circle-bold-duotone'
-							: lastGoal.status === 'running'
-								? 'solar:refresh-circle-bold-duotone'
-								: 'solar:close-circle-bold-duotone'}
+						icon={lastGoal.status === 'completed' ? 'solar:check-circle-bold-duotone'
+							: lastGoal.status === 'running' ? 'solar:refresh-circle-bold-duotone'
+							: lastGoal.status === 'scheduled' ? 'solar:clock-circle-bold-duotone'
+							: 'solar:close-circle-bold-duotone'}
 						class="h-3.5 w-3.5"
 					/>
-					{lastGoal.status === 'completed'
-						? 'Success'
-						: lastGoal.status === 'running'
-							? 'Running'
-							: 'Failed'}
+					{lastGoal.status === 'completed' ? 'Success'
+						: lastGoal.status === 'running' ? 'Running'
+						: lastGoal.status === 'scheduled' ? 'Scheduled'
+						: 'Failed'}
 				</span>
 				<span class="text-[11px] text-stone-400">{relativeTime(lastGoal.startedAt)}</span>
 			</div>

@@ -8,7 +8,8 @@
 		submitGoal as submitGoalCmd,
 		stopGoal as stopGoalCmd,
 		investigateSession as investigateSessionCmd,
-		deleteAppHint as deleteAppHintCmd
+		deleteAppHint as deleteAppHintCmd,
+		cancelScheduledGoal
 	} from '$lib/api/devices.remote';
 	import { dashboardWs } from '$lib/stores/dashboard-ws.svelte';
 	import { onMount } from 'svelte';
@@ -64,6 +65,8 @@
 		stepsUsed: number | null;
 		startedAt: Date;
 		completedAt: Date | null;
+		scheduledFor: Date | null;
+		scheduledDelay: number | null;
 	}
 	interface Step {
 		id: string;
@@ -215,6 +218,18 @@
 					const success = msg.success as boolean;
 					runStatus = success ? 'completed' : 'failed';
 					track(DEVICE_GOAL_COMPLETE, { success });
+					listDeviceSessions(deviceId).then((s) => {
+						sessions = s as Session[];
+					});
+					break;
+				}
+				case 'goal_scheduled': {
+					listDeviceSessions(deviceId).then((s) => {
+						sessions = s as Session[];
+					});
+					break;
+				}
+				case 'goal_cancelled': {
 					listDeviceSessions(deviceId).then((s) => {
 						sessions = s as Session[];
 					});
@@ -463,36 +478,61 @@
 							<p class="truncate text-sm font-medium text-stone-900">{sess.goal}</p>
 							<p class="mt-0.5 flex items-center gap-1.5 text-xs text-stone-400">
 								<Icon icon="solar:clock-circle-bold-duotone" class="h-3.5 w-3.5" />
-								{formatTime(sess.startedAt)} &middot; {sess.stepsUsed} steps
+								{#if sess.status === 'scheduled' && sess.scheduledFor}
+									Scheduled for {new Date(sess.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+								{:else}
+									{formatTime(sess.startedAt)} &middot; {sess.stepsUsed} steps
+								{/if}
 							</p>
 						</div>
 						<span
-							class="ml-3 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium {sess.status ===
-							'completed'
-								? 'bg-emerald-50 text-emerald-700'
-								: sess.status === 'running'
-									? 'bg-amber-50 text-amber-700'
-									: 'bg-red-50 text-red-700'}"
+							class="ml-3 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
+								{sess.status === 'completed' ? 'bg-emerald-50 text-emerald-700'
+								: sess.status === 'running' ? 'bg-amber-50 text-amber-700'
+								: sess.status === 'scheduled' ? 'bg-blue-50 text-blue-700'
+								: sess.status === 'cancelled' ? 'bg-stone-100 text-stone-500'
+								: 'bg-red-50 text-red-700'}"
 						>
 							<Icon
-								icon={sess.status === 'completed'
-									? 'solar:check-circle-bold-duotone'
-									: sess.status === 'running'
-										? 'solar:refresh-circle-bold-duotone'
-										: 'solar:close-circle-bold-duotone'}
+								icon={sess.status === 'completed' ? 'solar:check-circle-bold-duotone'
+									: sess.status === 'running' ? 'solar:refresh-circle-bold-duotone'
+									: sess.status === 'scheduled' ? 'solar:clock-circle-bold-duotone'
+									: sess.status === 'cancelled' ? 'solar:close-circle-bold-duotone'
+									: 'solar:close-circle-bold-duotone'}
 								class="h-3.5 w-3.5"
 							/>
-							{sess.status === 'completed'
-								? 'Success'
-								: sess.status === 'running'
-									? 'Running'
-									: 'Failed'}
+							{sess.status === 'completed' ? 'Success'
+								: sess.status === 'running' ? 'Running'
+								: sess.status === 'scheduled' ? 'Scheduled'
+								: sess.status === 'cancelled' ? 'Cancelled'
+								: 'Failed'}
 						</span>
 					</button>
 					{#if expandedSession === sess.id}
 						<div class="border-t border-stone-100 bg-stone-50 px-4 md:px-6 py-4
 							{i === sessions.length - 1 ? 'rounded-b-2xl' : ''}">
-							{#if sessionSteps.has(sess.id)}
+							{#if sess.status === 'scheduled'}
+								<div class="flex items-center gap-3 py-2">
+									<Icon icon="solar:clock-circle-bold-duotone" class="h-5 w-5 text-blue-500" />
+									<div class="flex-1">
+										<p class="text-sm font-medium text-stone-700">
+											Fires at {sess.scheduledFor ? new Date(sess.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'unknown'}
+										</p>
+										<p class="text-xs text-stone-400">
+											{sess.scheduledDelay ? `${Math.ceil(sess.scheduledDelay / 60)} min delay` : ''}
+										</p>
+									</div>
+									<button
+										onclick={async () => {
+											await cancelScheduledGoal({ sessionId: sess.id });
+											sessions = (await listDeviceSessions(deviceId)) as Session[];
+										}}
+										class="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
+									>
+										Cancel
+									</button>
+								</div>
+							{:else if sessionSteps.has(sess.id)}
 								<div class="space-y-2.5">
 									{#each sessionSteps.get(sess.id) ?? [] as s (s.id)}
 										<div class="flex items-baseline gap-2.5">
