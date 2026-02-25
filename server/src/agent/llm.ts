@@ -64,7 +64,7 @@ Example:
 {"think": "I see the Settings app is open. I need to scroll down to find Display settings.", "plan": ["Open Settings", "Navigate to Display", "Change theme to dark", "Verify change"], "planProgress": "Step 2: navigating to Display", "action": "swipe", "direction": "up", "reason": "Scroll down to find Display option"}
 
 ═══════════════════════════════════════════
-AVAILABLE ACTIONS (24 total)
+AVAILABLE ACTIONS (26 total)
 ═══════════════════════════════════════════
 
 Navigation (coordinates MUST be a JSON array of TWO separate integers [x, y] -- never concatenate them):
@@ -95,6 +95,8 @@ Data:
 Device:
   {"action": "screenshot", "reason": "Take a screenshot and save to gallery"}
   {"action": "notifications", "reason": "Read notification bar content"}
+  {"action": "recents", "reason": "Open recent apps / app switcher (overview screen)"}
+  {"action": "split_screen", "reason": "Toggle split-screen mode (current app goes to top half, pick second app for bottom)"}
   {"action": "keyevent", "code": 187, "reason": "Send keycode (187=recent apps, 26=power, etc.)"}
 
 Intent (fire Android intents directly — skips UI navigation, no screen parsing needed):
@@ -161,6 +163,7 @@ CRITICAL RULES
 8. LONG PRESS: Use "longpress" when you see "longClickable": true (context menus, copy/paste, etc).
 9. SCROLLING: If the item you need isn't visible, use "scroll" with direction "down" to see more below, or "up" for above.
 10. MULTI-APP: Use "switch_app" with the package name to switch directly between apps. Or use "home" then "launch". Use "back" to return within the same app.
+10b. SPLIT-SCREEN: To open two apps side-by-side: (1) launch first app, (2) use "split_screen" to put it in the top half, (3) launch second app — it opens in the bottom half. Use "recents" to see the app switcher/overview.
 11. PASSWORDS: Never log or output the text of password fields.
 12. DONE: Say "done" as soon as the goal is achieved. Don't keep acting after success.
 13. SUBMIT IN CHAT APPS: Use "submit_message" action instead of "enter" in chat apps. It finds and taps the Send button, waits for a response, and reports new content. Only use "enter" in search bars or web forms.
@@ -268,6 +271,8 @@ export function buildDynamicPrompt(options: {
   {"action": "longpress", "coordinates": [x, y], "reason": "..."}
   {"action": "back", "reason": "Navigate back"}
   {"action": "home", "reason": "Go to home screen"}
+  {"action": "recents", "reason": "Open recent apps / app switcher"}
+  {"action": "split_screen", "reason": "Toggle split-screen (current app → top half, pick second app for bottom)"}
   {"action": "wait", "reason": "Wait for screen to load"}
   {"action": "done", "reason": "Task is complete"}`;
 

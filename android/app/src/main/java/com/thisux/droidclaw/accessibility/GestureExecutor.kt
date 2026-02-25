@@ -32,6 +32,8 @@ class GestureExecutor(private val service: DroidClawAccessibilityService) {
                 "back" -> executeGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
                 "home" -> executeGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
                 "notifications" -> executeGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                "recents" -> executeGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+                "split_screen" -> executeGlobalAction(AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
                 "longpress" -> executeLongPress(msg.x ?: 0, msg.y ?: 0)
                 "swipe" -> executeSwipe(
                     msg.x1 ?: 0, msg.y1 ?: 0,
