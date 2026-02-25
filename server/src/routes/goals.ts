@@ -8,11 +8,9 @@ import type { LLMConfig } from "../agent/llm.js";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { agentSession, llmConfig as llmConfigTable } from "../schema.js";
+import { activeSessions } from "../agent/active-sessions.js";
 
 const goals = new Hono<AuthEnv>();
-
-/** Track running agent sessions so we can prevent duplicates and cancel them */
-const activeSessions = new Map<string, { sessionId: string; goal: string; abort: AbortController }>();
 
 goals.post("/", sessionMiddleware, async (c) => {
   const user = c.get("user");

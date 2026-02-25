@@ -12,6 +12,7 @@ import {
   handleVoiceSend,
   handleVoiceCancel,
 } from "./voice.js";
+import { activeSessions } from "../agent/active-sessions.js";
 
 /**
  * Hash an API key the same way better-auth does:
@@ -26,9 +27,6 @@ async function hashApiKey(key: string): Promise<string> {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 }
-
-/** Track running agent sessions to prevent duplicates per device */
-const activeSessions = new Map<string, { goal: string; abort: AbortController }>();
 
 /**
  * Send a JSON message to a device WebSocket (safe — catches send errors).
@@ -304,17 +302,22 @@ export async function handleDeviceMessage(
 
     case "stop_goal": {
       const deviceId = ws.data.deviceId!;
-      const active = activeSessions.get(deviceId);
+      const persistentId = ws.data.persistentDeviceId;
+
+      // Look up by ephemeral deviceId first, then by persistentDeviceId
+      // (goals started from the web dashboard are keyed by persistentDeviceId)
+      const key = activeSessions.has(deviceId)
+        ? deviceId
+        : persistentId && activeSessions.has(persistentId)
+          ? persistentId
+          : null;
+
+      const active = key ? activeSessions.get(key) : undefined;
       if (active) {
-        console.log(`[Pipeline] Stop requested for device ${deviceId}`);
+        console.log(`[Pipeline] Stop requested for device ${deviceId} (key: ${key})`);
         active.abort.abort();
-        activeSessions.delete(deviceId);
-        sendToDevice(ws, {
-          type: "goal_completed",
-          sessionId: deviceId,
-          success: false,
-          stepsUsed: 0,
-        });
+        // Don't delete from activeSessions here — let the pipeline's
+        // onComplete/catch handler clean up to avoid race conditions.
       }
       break;
     }
@@ -497,10 +500,15 @@ export function handleDeviceClose(
   const { deviceId, userId, persistentDeviceId } = ws.data;
   if (!deviceId) return;
 
-  const active = activeSessions.get(deviceId);
-  if (active) {
-    active.abort.abort();
-    activeSessions.delete(deviceId);
+  // Abort any running pipeline — check both ephemeral and persistent keys
+  const closeKey = activeSessions.has(deviceId)
+    ? deviceId
+    : persistentDeviceId && activeSessions.has(persistentDeviceId)
+      ? persistentDeviceId
+      : null;
+  if (closeKey) {
+    activeSessions.get(closeKey)!.abort.abort();
+    activeSessions.delete(closeKey);
   }
   handleVoiceCancel(deviceId);
   sessions.removeDevice(deviceId);
