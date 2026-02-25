@@ -196,6 +196,26 @@ export const stopGoal = command(
 	}
 );
 
+export const cancelScheduledGoal = command(
+	v.object({ sessionId: v.string() }),
+	async ({ sessionId }) => {
+		const { locals } = getRequestEvent();
+		if (!locals.user) throw new Error('unauthorized');
+
+		const res = await fetch(`${SERVER_URL()}/goals/${sessionId}/schedule`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				'x-internal-secret': INTERNAL_SECRET(),
+				'x-internal-user-id': locals.user.id
+			}
+		});
+		const data = await res.json().catch(() => ({ error: 'Unknown error' }));
+		if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+		return data;
+	}
+);
+
 export const investigateSession = command(
 	v.object({ sessionId: v.string() }),
 	async ({ sessionId }) => {
