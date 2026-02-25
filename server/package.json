@@ -10,6 +10,7 @@
   "dependencies": {
     "@droidclaw/shared": "workspace:*",
     "@polar-sh/sdk": "^0.43.1",
+    "@upstash/qstash": "^2.9.0",
     "better-auth": "^1.3.27",
     "drizzle-orm": "^0.44.5",
     "hono": "^4.7.0",
