@@ -7,7 +7,10 @@ let _client: Client | null = null;
 export function getQStashClient(): Client | null {
   if (!env.QSTASH_TOKEN) return null;
   if (!_client) {
-    _client = new Client({ token: env.QSTASH_TOKEN });
+    _client = new Client({
+      token: env.QSTASH_TOKEN,
+      ...(env.QSTASH_URL ? { baseUrl: env.QSTASH_URL } : {}),
+    });
   }
   return _client;
 }

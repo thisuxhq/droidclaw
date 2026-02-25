@@ -6,6 +6,7 @@ export const env = {
   POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN || "",
   POLAR_ORGANIZATION_ID: process.env.POLAR_ORGANIZATION_ID || "",
   POLAR_SANDBOX: process.env.POLAR_SANDBOX || "false",
+  QSTASH_URL: process.env.QSTASH_URL || "",
   QSTASH_TOKEN: process.env.QSTASH_TOKEN || "",
   QSTASH_CURRENT_SIGNING_KEY: process.env.QSTASH_CURRENT_SIGNING_KEY || "",
   QSTASH_NEXT_SIGNING_KEY: process.env.QSTASH_NEXT_SIGNING_KEY || "",
