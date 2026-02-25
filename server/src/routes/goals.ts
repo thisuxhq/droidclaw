@@ -1,19 +1,20 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
+import { Receiver } from "@upstash/qstash";
 import { sessionMiddleware, type AuthEnv } from "../middleware/auth.js";
 import { sessions } from "../ws/sessions.js";
 import { runPipeline, type PipelineOptions } from "../agent/pipeline.js";
 import type { LLMConfig } from "../agent/llm.js";
 import { db } from "../db.js";
-import { llmConfig as llmConfigTable } from "../schema.js";
+import { env } from "../env.js";
+import { agentSession, llmConfig as llmConfigTable } from "../schema.js";
 
 const goals = new Hono<AuthEnv>();
-goals.use("*", sessionMiddleware);
 
 /** Track running agent sessions so we can prevent duplicates and cancel them */
 const activeSessions = new Map<string, { sessionId: string; goal: string; abort: AbortController }>();
 
-goals.post("/", async (c) => {
+goals.post("/", sessionMiddleware, async (c) => {
   const user = c.get("user");
   const body = await c.req.json<{
     deviceId: string;
@@ -146,7 +147,7 @@ goals.post("/", async (c) => {
   });
 });
 
-goals.post("/stop", async (c) => {
+goals.post("/stop", sessionMiddleware, async (c) => {
   const user = c.get("user");
   const body = await c.req.json<{ deviceId: string }>();
 
@@ -173,6 +174,185 @@ goals.post("/stop", async (c) => {
   active.abort.abort();
   console.log(`[Agent] Stop requested for device ${body.deviceId}`);
   return c.json({ status: "stopping" });
+});
+
+/**
+ * QStash callback — executes a scheduled goal.
+ * Auth: QStash signature verification (not session auth).
+ */
+goals.post("/execute", async (c) => {
+  const body = await c.req.text();
+
+  // Verify QStash signature if signing keys configured
+  if (env.QSTASH_CURRENT_SIGNING_KEY) {
+    const receiver = new Receiver({
+      currentSigningKey: env.QSTASH_CURRENT_SIGNING_KEY,
+      nextSigningKey: env.QSTASH_NEXT_SIGNING_KEY,
+    });
+    const signature = c.req.header("upstash-signature") ?? "";
+    try {
+      await receiver.verify({ signature, body });
+    } catch {
+      return c.json({ error: "Invalid QStash signature" }, 401);
+    }
+  }
+
+  const payload = JSON.parse(body) as {
+    sessionId: string;
+    deviceId: string;
+    userId: string;
+    goal: string;
+  };
+
+  const { sessionId, deviceId, userId, goal } = payload;
+
+  // Update session status to running
+  await db
+    .update(agentSession)
+    .set({ status: "running", startedAt: new Date() })
+    .where(eq(agentSession.id, sessionId));
+
+  // Check device is online
+  const device = sessions.getDeviceByPersistentId(deviceId);
+  if (!device) {
+    await db
+      .update(agentSession)
+      .set({ status: "failed", completedAt: new Date() })
+      .where(eq(agentSession.id, sessionId));
+
+    sessions.notifyDashboard(userId, {
+      type: "goal_failed",
+      sessionId,
+      message: "Device offline when scheduled goal fired",
+    });
+
+    // Return 500 so QStash retries
+    return c.json({ error: "Device not connected" }, 500);
+  }
+
+  // Fetch LLM config
+  const configs = await db
+    .select()
+    .from(llmConfigTable)
+    .where(eq(llmConfigTable.userId, userId))
+    .limit(1);
+
+  if (configs.length === 0) {
+    await db
+      .update(agentSession)
+      .set({ status: "failed", completedAt: new Date() })
+      .where(eq(agentSession.id, sessionId));
+    return c.json({ error: "No LLM config" }, 400);
+  }
+
+  const cfg = configs[0];
+  const llmCfg: LLMConfig = {
+    provider: cfg.provider,
+    apiKey: cfg.apiKey,
+    model: cfg.model ?? undefined,
+  };
+
+  const abort = new AbortController();
+  const trackingKey = device.persistentDeviceId ?? device.deviceId;
+
+  if (activeSessions.has(trackingKey)) {
+    return c.json({ error: "Device busy" }, 500);
+  }
+
+  const sendToDevice = (msg: Record<string, unknown>) => {
+    const d = sessions.getDevice(device.deviceId) ?? sessions.getDeviceByPersistentId(device.persistentDeviceId ?? "");
+    if (!d) return;
+    try { d.ws.send(JSON.stringify(msg)); } catch { /* disconnected */ }
+  };
+
+  activeSessions.set(trackingKey, { sessionId, goal, abort });
+  sendToDevice({ type: "goal_started", goal });
+
+  sessions.notifyDashboard(userId, {
+    type: "goal_started",
+    deviceId: device.persistentDeviceId ?? device.deviceId,
+    goal,
+    sessionId,
+  });
+
+  runPipeline({
+    deviceId: device.deviceId,
+    persistentDeviceId: device.persistentDeviceId,
+    userId,
+    goal,
+    llmConfig: llmCfg,
+    signal: abort.signal,
+    onStep(step) {
+      sendToDevice({
+        type: "step",
+        step: step.stepNumber,
+        action: step.action,
+        reasoning: step.reasoning,
+      });
+    },
+    onComplete(result) {
+      sendToDevice({
+        type: "goal_completed",
+        success: result.success,
+        stepsUsed: result.stepsUsed,
+      });
+    },
+  })
+    .then((result) => {
+      activeSessions.delete(trackingKey);
+      console.log(`[Scheduled] Completed: ${result.success ? "success" : "incomplete"} in ${result.stepsUsed} steps`);
+    })
+    .catch((err) => {
+      activeSessions.delete(trackingKey);
+      sendToDevice({ type: "goal_failed", message: String(err) });
+      console.error(`[Scheduled] Error: ${err}`);
+    });
+
+  return c.json({ status: "started", sessionId });
+});
+
+/**
+ * Cancel a scheduled goal.
+ */
+goals.delete("/:id/schedule", sessionMiddleware, async (c) => {
+  const user = c.get("user");
+  const goalId = c.req.param("id");
+
+  const rows = await db
+    .select()
+    .from(agentSession)
+    .where(eq(agentSession.id, goalId))
+    .limit(1);
+
+  if (rows.length === 0) return c.json({ error: "Session not found" }, 404);
+  const sess = rows[0];
+  if (sess.userId !== user.id) return c.json({ error: "Not your session" }, 403);
+  if (sess.status !== "scheduled") return c.json({ error: "Session is not scheduled" }, 400);
+
+  // Cancel in QStash
+  if (sess.qstashMessageId) {
+    const { getQStashClient } = await import("../qstash.js");
+    const qstash = getQStashClient();
+    if (qstash) {
+      try {
+        await qstash.messages.delete(sess.qstashMessageId);
+      } catch (err) {
+        console.warn(`[Goals] QStash cancel failed: ${err}`);
+      }
+    }
+  }
+
+  await db
+    .update(agentSession)
+    .set({ status: "cancelled", completedAt: new Date() })
+    .where(eq(agentSession.id, goalId));
+
+  sessions.notifyDashboard(user.id, {
+    type: "goal_cancelled",
+    sessionId: goalId,
+  });
+
+  return c.json({ status: "cancelled" });
 });
 
 export { goals };
