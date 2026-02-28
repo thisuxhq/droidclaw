@@ -2,9 +2,8 @@ import { sessions } from "../ws/sessions.js";
 import { db } from "../db.js";
 import { workflowRun } from "../schema.js";
 import { eq } from "drizzle-orm";
-import { runPipeline, type PipelineOptions } from "./pipeline.js";
+import { runPipeline } from "./pipeline.js";
 import type { LLMConfig } from "./llm.js";
-import { activeSessions } from "./active-sessions.js";
 
 export interface WorkflowStep {
   goal: string;
