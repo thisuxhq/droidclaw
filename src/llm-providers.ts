@@ -410,34 +410,53 @@ class OpenRouterProvider implements LLMProvider {
 
   async getDecision(messages: ChatMessage[]): Promise<ActionDecision> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const { object } = await generateObject({
+    // Use generateText + JSON parsing instead of generateObject.
+    // OpenRouter proxies structured output through Azure's schema validator
+    // which rejects valid JSON Schema features (tuples, minItems, optional
+    // properties, propertyNames). Text mode with JSON instructions works
+    // universally across all providers.
+    const jsonInstruction = "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown fences, no text before or after. The JSON must have an 'action' field (string) and optionally: think, plan, planProgress, coordinates ([x,y] array of 2 numbers), text, direction, reason, package, activity, uri, extras, command, filename, query, url, path, source, dest, code, setting.";
+    const { text } = await generateText({
       model: this.openrouter.chat(this.model),
-      schema: actionDecisionSchema,
-      system,
+      system: (system || "") + jsonInstruction,
       messages: converted as any,
     });
-    // Sanitize coordinates from structured output
-    const decision = object as ActionDecision;
+    // Extract JSON from response (handle markdown fences if model wraps it)
+    let jsonStr = text.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+    // Find first { to last }
+    const start = jsonStr.indexOf("{");
+    const end = jsonStr.lastIndexOf("}");
+    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+
+    const parsed = JSON.parse(jsonStr);
+    const decision = parsed as ActionDecision;
     decision.coordinates = sanitizeCoordinates(decision.coordinates);
     return decision;
   }
 
   async *getDecisionStream(messages: ChatMessage[]): AsyncIterable<string> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const { partialObjectStream } = streamObject({
+    const jsonInstruction = "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown fences, no text before or after. The JSON must have an 'action' field (string) and optionally: think, plan, planProgress, coordinates ([x,y] array of 2 numbers), text, direction, reason, package, activity, uri, extras, command, filename, query, url, path, source, dest, code, setting.";
+    const { textStream } = streamText({
       model: this.openrouter.chat(this.model),
-      schema: actionDecisionSchema,
-      system,
+      system: (system || "") + jsonInstruction,
       messages: converted as any,
     });
-    // Accumulate partial objects and yield the final complete one as JSON
-    let lastObject: any = {};
-    for await (const partial of partialObjectStream) {
-      lastObject = partial;
-      // Yield a dot for progress indication (streaming UI feedback)
+    let accumulated = "";
+    for await (const chunk of textStream) {
+      accumulated += chunk;
       yield ".";
     }
-    yield JSON.stringify(lastObject);
+    // Extract JSON from accumulated text
+    let jsonStr = accumulated.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+    const start = jsonStr.indexOf("{");
+    const end = jsonStr.lastIndexOf("}");
+    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+    yield jsonStr;
   }
 }
 
