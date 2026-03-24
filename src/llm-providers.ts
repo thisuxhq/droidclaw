@@ -350,14 +350,14 @@ const actionDecisionSchema = z.object({
   plan: z.array(z.string()).optional().describe("3-5 high-level steps to achieve the goal"),
   planProgress: z.string().optional().describe("Which plan step you are currently on"),
   action: z.string().describe("The action to take: tap, type, scroll, enter, back, home, wait, done, longpress, launch, clear, clipboard_get, clipboard_set, paste, shell, open_url, switch_app, notifications, pull_file, push_file, keyevent, open_settings, read_screen, submit_message, copy_visible_text, wait_for_content, find_and_tap, compose_email"),
-  coordinates: z.tuple([z.number(), z.number()]).optional().describe("Target field as [x, y] — used by tap, longpress, type, and paste"),
+  coordinates: z.array(z.number()).min(2).max(2).optional().describe("Target field as [x, y] — used by tap, longpress, type, and paste"),
   text: z.string().optional().describe("Text to type, clipboard text, or email body for compose_email"),
   direction: z.string().optional().describe("Scroll direction: up, down, left, right"),
   reason: z.string().optional().describe("Why you chose this action"),
   package: z.string().optional().describe("App package name for launch action"),
   activity: z.string().optional().describe("Activity name for launch action"),
   uri: z.string().optional().describe("URI for launch action"),
-  extras: z.record(z.string(), z.string()).optional().describe("Intent extras for launch action"),
+  extras: z.object({}).passthrough().optional().describe("Intent extras for launch action as key-value string pairs"),
   command: z.string().optional().describe("Shell command to run"),
   filename: z.string().optional().describe("Screenshot filename"),
   query: z.string().optional().describe("Email address for compose_email (REQUIRED), search term for find_and_tap (REQUIRED), or filter for copy_visible_text"),
@@ -410,34 +410,53 @@ class OpenRouterProvider implements LLMProvider {
 
   async getDecision(messages: ChatMessage[]): Promise<ActionDecision> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const { object } = await generateObject({
+    // Use generateText + JSON parsing instead of generateObject.
+    // OpenRouter proxies structured output through Azure's schema validator
+    // which rejects valid JSON Schema features (tuples, minItems, optional
+    // properties, propertyNames). Text mode with JSON instructions works
+    // universally across all providers.
+    const jsonInstruction = "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown fences, no text before or after. The JSON must have an 'action' field (string) and optionally: think, plan, planProgress, coordinates ([x,y] array of 2 numbers), text, direction, reason, package, activity, uri, extras, command, filename, query, url, path, source, dest, code, setting.";
+    const { text } = await generateText({
       model: this.openrouter.chat(this.model),
-      schema: actionDecisionSchema,
-      system,
+      system: (system || "") + jsonInstruction,
       messages: converted as any,
     });
-    // Sanitize coordinates from structured output
-    const decision = object as ActionDecision;
+    // Extract JSON from response (handle markdown fences if model wraps it)
+    let jsonStr = text.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+    // Find first { to last }
+    const start = jsonStr.indexOf("{");
+    const end = jsonStr.lastIndexOf("}");
+    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+
+    const parsed = JSON.parse(jsonStr);
+    const decision = parsed as ActionDecision;
     decision.coordinates = sanitizeCoordinates(decision.coordinates);
     return decision;
   }
 
   async *getDecisionStream(messages: ChatMessage[]): AsyncIterable<string> {
     const { system, messages: converted } = this.toVercelMessages(messages);
-    const { partialObjectStream } = streamObject({
+    const jsonInstruction = "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown fences, no text before or after. The JSON must have an 'action' field (string) and optionally: think, plan, planProgress, coordinates ([x,y] array of 2 numbers), text, direction, reason, package, activity, uri, extras, command, filename, query, url, path, source, dest, code, setting.";
+    const { textStream } = streamText({
       model: this.openrouter.chat(this.model),
-      schema: actionDecisionSchema,
-      system,
+      system: (system || "") + jsonInstruction,
       messages: converted as any,
     });
-    // Accumulate partial objects and yield the final complete one as JSON
-    let lastObject: any = {};
-    for await (const partial of partialObjectStream) {
-      lastObject = partial;
-      // Yield a dot for progress indication (streaming UI feedback)
+    let accumulated = "";
+    for await (const chunk of textStream) {
+      accumulated += chunk;
       yield ".";
     }
-    yield JSON.stringify(lastObject);
+    // Extract JSON from accumulated text
+    let jsonStr = accumulated.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+    const start = jsonStr.indexOf("{");
+    const end = jsonStr.lastIndexOf("}");
+    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+    yield jsonStr;
   }
 }
 
