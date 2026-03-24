@@ -357,7 +357,7 @@ const actionDecisionSchema = z.object({
   package: z.string().optional().describe("App package name for launch action"),
   activity: z.string().optional().describe("Activity name for launch action"),
   uri: z.string().optional().describe("URI for launch action"),
-  extras: z.record(z.string(), z.string()).optional().describe("Intent extras for launch action"),
+  extras: z.object({}).passthrough().optional().describe("Intent extras for launch action as key-value string pairs"),
   command: z.string().optional().describe("Shell command to run"),
   filename: z.string().optional().describe("Screenshot filename"),
   query: z.string().optional().describe("Email address for compose_email (REQUIRED), search term for find_and_tap (REQUIRED), or filter for copy_visible_text"),
