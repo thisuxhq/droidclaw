@@ -350,7 +350,7 @@ const actionDecisionSchema = z.object({
   plan: z.array(z.string()).optional().describe("3-5 high-level steps to achieve the goal"),
   planProgress: z.string().optional().describe("Which plan step you are currently on"),
   action: z.string().describe("The action to take: tap, type, scroll, enter, back, home, wait, done, longpress, launch, clear, clipboard_get, clipboard_set, paste, shell, open_url, switch_app, notifications, pull_file, push_file, keyevent, open_settings, read_screen, submit_message, copy_visible_text, wait_for_content, find_and_tap, compose_email"),
-  coordinates: z.tuple([z.number(), z.number()]).optional().describe("Target field as [x, y] — used by tap, longpress, type, and paste"),
+  coordinates: z.array(z.number()).min(2).max(2).optional().describe("Target field as [x, y] — used by tap, longpress, type, and paste"),
   text: z.string().optional().describe("Text to type, clipboard text, or email body for compose_email"),
   direction: z.string().optional().describe("Scroll direction: up, down, left, right"),
   reason: z.string().optional().describe("Why you chose this action"),
