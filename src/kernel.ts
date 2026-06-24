@@ -246,8 +246,9 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
           );
 
           // Context-aware recovery hints based on what actions are failing
+          const validActions = recentActions.filter(Boolean);
           const failingTypes = new Set(
-            recentActions.slice(-stuckCount).map((a) => a.split("(")[0])
+            validActions.slice(-stuckCount).map((a) => a.split("(")[0])
           );
 
           let hint = `\nWARNING: You have been stuck for ${stuckCount} steps. The screen is NOT changing.`;
@@ -301,7 +302,8 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
     // 2C. Drift detection — agent is floundering (swipe/back/wait/screenshot spam)
     if (recentActions.length >= 4) {
       const navigationActions = new Set(["swipe", "scroll", "back", "home", "wait"]);
-      const navCount = recentActions
+      const validActions = recentActions.filter(Boolean);
+      const navCount = validActions
         .slice(-5)
         .filter((a) => navigationActions.has(a.split("(")[0])).length;
       if (navCount >= 4) {
