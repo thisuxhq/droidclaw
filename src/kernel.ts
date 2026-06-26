@@ -247,7 +247,7 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
 
           // Context-aware recovery hints based on what actions are failing
           const failingTypes = new Set(
-            recentActions.slice(-stuckCount).map((a) => a.split("(")[0])
+            recentActions.slice(-stuckCount).filter(Boolean).map((a) => a.split("(")[0])
           );
 
           let hint = `\nWARNING: You have been stuck for ${stuckCount} steps. The screen is NOT changing.`;

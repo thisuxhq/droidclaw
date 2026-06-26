@@ -27,7 +27,10 @@ export function createStuckDetector(windowSize: number = 8): StuckDetector {
         unchangedCount = 0;
       }
 
-      recentActions.push(action);
+      // Guard against undefined action signatures (LLM parse failures)
+      if (action != null) {
+        recentActions.push(action);
+      }
       recentHashes.push(screenHash);
       if (recentActions.length > windowSize) recentActions.shift();
       if (recentHashes.length > windowSize) recentHashes.shift();
@@ -54,7 +57,7 @@ export function createStuckDetector(windowSize: number = 8): StuckDetector {
     getRecoveryHint(): string {
       // Context-aware recovery based on what actions are failing
       const failingTypes = new Set(
-        recentActions.slice(-3).map((a) => a.split("(")[0])
+        recentActions.slice(-3).filter(Boolean).map((a) => a.split("(")[0])
       );
 
       let hint =
