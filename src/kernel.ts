@@ -303,6 +303,7 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
       const navigationActions = new Set(["swipe", "scroll", "back", "home", "wait"]);
       const navCount = recentActions
         .slice(-5)
+        .filter(Boolean)
         .filter((a) => navigationActions.has(a.split("(")[0])).length;
       if (navCount >= 4) {
         diffContext +=
