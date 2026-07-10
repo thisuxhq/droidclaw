@@ -279,7 +279,9 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
     // 2B. Repetition detection (persists across screen changes — catches retry loops)
     if (recentActions.length >= 3) {
       const freq = new Map<string, number>();
-      for (const a of recentActions) freq.set(a, (freq.get(a) ?? 0) + 1);
+      for (const a of recentActions) {
+        if (a) freq.set(a, (freq.get(a) ?? 0) + 1);
+      }
       const [topAction, topCount] = [...freq.entries()].reduce(
         (a, b) => (b[1] > a[1] ? b : a),
         ["", 0]
@@ -432,7 +434,9 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
     const actionSig = decision.coordinates
       ? `${decision.action}(${decision.coordinates.join(",")})`
       : decision.action;
-    recentActions.push(actionSig);
+    if (actionSig) {
+      recentActions.push(actionSig);
+    }
     if (recentActions.length > 8) recentActions.shift();
 
     // Capture action result feedback for next iteration
