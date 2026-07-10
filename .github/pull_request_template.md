@@ -1,9 +1,9 @@
 ## Change Decision Package
 
 <!-- Required on every code PR: bug fix, feature, internal infra, UI, migration.
-     Substance over headings — answer each category, don't just keep the labels.
+     Substance over headings. Answer each category, don't just keep the labels.
      N/A only when structurally inapplicable, always with a one-line reason.
-     If only one credible approach exists, say so and why — don't manufacture alternatives. -->
+     If only one credible approach exists, say so and why. Don't manufacture alternatives. -->
 
 1. **Origin:** <!-- who asked / which issue / which report; for a bug: root cause + reporter -->
 2. **User/operator path + experience:** <!-- the exact steps or system conditions that produce the current behavior, what the person experiences, and what should happen instead; for features: the before-and-after path -->
