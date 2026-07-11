@@ -247,7 +247,7 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
 
           // Context-aware recovery hints based on what actions are failing
           const failingTypes = new Set(
-            recentActions.slice(-stuckCount).map((a) => a.split("(")[0])
+            recentActions.slice(-stuckCount).filter(Boolean).map((a) => a.split("(")[0])
           );
 
           let hint = `\nWARNING: You have been stuck for ${stuckCount} steps. The screen is NOT changing.`;
@@ -279,7 +279,9 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
     // 2B. Repetition detection (persists across screen changes — catches retry loops)
     if (recentActions.length >= 3) {
       const freq = new Map<string, number>();
-      for (const a of recentActions) freq.set(a, (freq.get(a) ?? 0) + 1);
+      for (const a of recentActions) {
+        if (a) freq.set(a, (freq.get(a) ?? 0) + 1);
+      }
       const [topAction, topCount] = [...freq.entries()].reduce(
         (a, b) => (b[1] > a[1] ? b : a),
         ["", 0]
@@ -303,6 +305,7 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
       const navigationActions = new Set(["swipe", "scroll", "back", "home", "wait"]);
       const navCount = recentActions
         .slice(-5)
+        .filter(Boolean)
         .filter((a) => navigationActions.has(a.split("(")[0])).length;
       if (navCount >= 4) {
         diffContext +=
@@ -431,7 +434,9 @@ export async function runAgent(goal: string, maxSteps?: number): Promise<{ succe
     const actionSig = decision.coordinates
       ? `${decision.action}(${decision.coordinates.join(",")})`
       : decision.action;
-    recentActions.push(actionSig);
+    if (actionSig) {
+      recentActions.push(actionSig);
+    }
     if (recentActions.length > 8) recentActions.shift();
 
     // Capture action result feedback for next iteration
