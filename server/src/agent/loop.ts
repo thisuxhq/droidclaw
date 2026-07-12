@@ -382,7 +382,9 @@ export async function runAgentLoop(
       // Repetition detection (persists across screen changes)
       if (recentActions.length >= 3) {
         const freq = new Map<string, number>();
-        for (const a of recentActions) freq.set(a, (freq.get(a) ?? 0) + 1);
+        for (const a of recentActions) {
+          if (a != null) freq.set(a, (freq.get(a) ?? 0) + 1);
+        }
         const [topAction, topCount] = [...freq.entries()].reduce(
           (a, b) => (b[1] > a[1] ? b : a),
           ["", 0]
@@ -405,7 +407,7 @@ export async function runAgentLoop(
         ]);
         const navCount = recentActions
           .slice(-5)
-          .filter((a) => navigationActions.has(a.split("(")[0])).length;
+          .filter((a) => a != null && navigationActions.has(a.split("(")[0])).length;
         if (navCount >= 4) {
           diffContext +=
             `\nDRIFT_WARNING: Your last ${navCount} actions were all navigation/waiting with no direct interaction. ` +
@@ -533,8 +535,8 @@ export async function runAgentLoop(
 
       // Track action for stuck detection
       const actionSig = action.coordinates
-        ? `${action.action}(${action.coordinates.join(",")})`
-        : action.action;
+        ? `${action.action ?? ""}(${action.coordinates.join(",")})`
+        : (action.action ?? "");
       stuck.recordAction(actionSig, screenHash);
       recentActions.push(actionSig);
       if (recentActions.length > 8) recentActions.shift();
